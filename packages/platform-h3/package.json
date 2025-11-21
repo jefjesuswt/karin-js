@@ -1,0 +1,16 @@
+{
+  "name": "@karinjs/platform-h3",
+  "version": "0.0.1",
+  "module": "index.ts",
+  "type": "module",
+  "dependencies": {
+    "@karinjs/core": "workspace:*",
+    "h3": "^2.0.1-rc.5"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}
