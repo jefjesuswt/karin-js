@@ -1,47 +1,47 @@
-# KarinJS 🦊
+# Karin-JS 🦊
 
 The Enterprise Framework for Bun. Built for speed, designed for sanity.
 
-[![NPM Version](https://img.shields.io/npm/v/@karinjs/core)](https://www.npmjs.com/package/@karinjs/core)
-[![Build Status](https://img.shields.io/github/actions/workflow/status/your-username/karinjs/ci.yml?branch=main)](https://github.com/your-username/karinjs/actions)
+[![NPM Version](https://img.shields.io/npm/v/@karin-js/core)](https://www.npmjs.com/package/@karin-js/core)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/your-username/karin-js/ci.yml?branch=main)](https://github.com/your-username/karin-js/actions)
 [![Bun Version](https://img.shields.io/badge/bun-%3E%3D1.0.0-lightgrey?logo=bun)](https://bun.sh/)
-[![License](https://img.shields.io/npm/l/@karinjs/core)](https://github.com/your-username/karinjs/blob/main/LICENSE)
+[![License](https://img.shields.io/npm/l/@karin-js/core)](https://github.com/your-username/karin-js/blob/main/LICENSE)
 
 ---
 
-## Why KarinJS?
+## Why Karin-JS?
 
-KarinJS is a next-generation, enterprise-ready framework for Node.js built on top of Bun. It's designed from the ground up to provide a development experience that is both incredibly fast and easy to maintain.
+Karin-JS is a next-generation, enterprise-ready framework for Node.js built on top of Bun. It's designed from the ground up to provide a development experience that is both incredibly fast and easy to maintain.
 
-- **🚀 10x Faster than NestJS:** Leveraging the power of Bun and a highly optimized core, KarinJS delivers unparalleled performance.
-- **📦 Module-less Architecture:** Say goodbye to complex module systems. KarinJS uses a simple, intuitive structure that makes your codebase cleaner and easier to reason about.
-- **💉 True Dependency Injection:** With `tsyringe`, KarinJS implements a robust and feature-rich dependency injection system, just like in enterprise languages like Java or C#.
-- **🔒 Fully Type-Safe:** Written in TypeScript, KarinJS provides a strongly-typed API to catch errors at compile time, not runtime.
+- **🚀 10x Faster than NestJS:** Leveraging the power of Bun and a highly optimized core, Karin-JS delivers unparalleled performance.
+- **📦 Module-less Architecture:** Say goodbye to complex module systems. Karin-JS uses a simple, intuitive structure that makes your codebase cleaner and easier to reason about.
+- **💉 True Dependency Injection:** With `tsyringe`, Karin-JS implements a robust and feature-rich dependency injection system, just like in enterprise languages like Java or C#.
+- **🔒 Fully Type-Safe:** Written in TypeScript, Karin-JS provides a strongly-typed API to catch errors at compile time, not runtime.
 
 ## Benchmark
 
-The results speak for themselves. In a head-to-head comparison with NestJS, KarinJS demonstrates a significant performance advantage.
+The results speak for themselves. In a head-to-head comparison with NestJS, Karin-JS demonstrates a significant performance advantage.
 
 - **Hardware:** AMD Ryzen 5 5600X, Arch Linux
 
 ### Throughput (Requests/Second)
 
 ![Throughput Benchmark](./docs/assets/benchmark_throughput.png)
-_KarinJS: ~97,609 req/sec | NestJS: ~9,715 req/sec_
+_Karin-JS: ~97,609 req/sec | NestJS: ~9,715 req/sec_
 
 ### Latency (ms)
 
 ![Latency Benchmark](./docs/assets/benchmark_latency.png)
-_KarinJS: ~1.01ms | NestJS: ~10.28ms_
+_Karin-JS: ~1.01ms | NestJS: ~10.28ms_
 
-> **Results:** KarinJS handles 10x more requests per second than NestJS, with a latency of minus 10x.
+> **Results:** Karin-JS handles 10x more requests per second than NestJS, with a latency of minus 10x.
 
 ## Installation
 
-Get started with KarinJS by installing the core packages:
+Get started with Karin-JS by installing the core packages:
 
 ```bash
-bun add @karinjs/core @karinjs/platform-h3 reflect-metadata tsyringe
+bun add @karin-js/core @karin-js/platform-h3 reflect-metadata tsyringe
 ```
 
 ## Quick Start
@@ -53,7 +53,7 @@ Create a fully functional HTTP server in just a few lines of code.
 `src/users.controller.ts`
 
 ```typescript
-import { Controller, Get } from "@karinjs/core";
+import { Controller, Get } from "@karin-js/core";
 
 @Controller("/users")
 export class UsersController {
@@ -75,8 +75,8 @@ export class UsersController {
 
 ```typescript
 import "reflect-metadata";
-import { KarinFactory } from "@karinjs/core";
-import { H3Adapter } from "@karinjs/platform-h3";
+import { KarinFactory } from "@karin-js/core";
+import { H3Adapter } from "@karin-js/platform-h3";
 import { UsersController } from "./users.controller";
 
 async function bootstrap() {
@@ -85,7 +85,7 @@ async function bootstrap() {
   });
 
   app.listen(3000, () => {
-    console.log("🦊 KarinJS server running on http://localhost:3000");
+    console.log("🦊 Karin-JS server running on http://localhost:3000");
   });
 }
 
@@ -100,8 +100,8 @@ bun run src/main.ts
 
 ## Contributing
 
-KarinJS is currently in its early stages (Alpha v0.0.1) and we welcome all contributions. Please feel free to open issues or pull requests.
+Karin-JS is currently in its early stages (Alpha v0.0.1) and we welcome all contributions. Please feel free to open issues or pull requests.
 
 ## License
 
-KarinJS is [MIT licensed](LICENSE).
+Karin-JS is [MIT licensed](LICENSE).

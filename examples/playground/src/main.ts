@@ -1,5 +1,5 @@
-import { KarinFactory } from "@karinjs/core";
-import { H3Adapter } from "@karinjs/platform-h3";
+import { KarinFactory } from "@karin-js/core";
+import { H3Adapter } from "@karin-js/platform-h3";
 
 async function bootstrap() {
   const app = await KarinFactory.create(new H3Adapter(), {

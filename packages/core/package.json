@@ -1,6 +1,6 @@
 {
-  "name": "@karinjs/core",
-  "version": "0.0.2",
+  "name": "@karin-js/core",
+  "version": "0.0.3",
   "module": "index.ts",
   "type": "module",
   "devDependencies": {

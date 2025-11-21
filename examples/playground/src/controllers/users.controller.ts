@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Query, Param } from "@karinjs/core";
+import { Controller, Get, Post, Body, Query, Param } from "@karin-js/core";
 
 @Controller("/bench")
 export class BenchController {

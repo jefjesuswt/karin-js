@@ -1,10 +1,10 @@
 {
-  "name": "@karinjs/platform-h3",
-  "version": "0.0.2",
+  "name": "@karin-js/platform-h3",
+  "version": "0.0.3",
   "module": "index.ts",
   "type": "module",
   "dependencies": {
-    "@karinjs/core": "workspace:*",
+    "@karin-js/core": "workspace:*",
     "h3": "^2.0.1-rc.5"
   },
   "devDependencies": {

@@ -1,5 +1,5 @@
 import { H3, handleCors } from "h3";
-import { Logger, type IHttpAdapter } from "@karinjs/core";
+import { Logger, type IHttpAdapter } from "@karin-js/core";
 
 export class H3Adapter implements IHttpAdapter {
   private app: H3;
