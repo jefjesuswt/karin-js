@@ -1,15 +1,84 @@
-# platform-h3
+# @karin-js/platform-h3 🦊
 
-To install dependencies:
+The H3 platform adapter for Karin-JS, the Enterprise Framework for Bun.
+
+[![NPM Version](https://img.shields.io/npm/v/@karin-js/platform-h3)](https://www.npmjs.com/package/@karin-js/platform-h3)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/your-username/karin-js/ci.yml?branch=main)](https://github.com/your-username/karin-js/actions)
+[![Bun Version](https://img.shields.io/badge/bun-%3E%3D1.0.0-lightgrey?logo=bun)](https://bun.sh/)
+[![License](https://img.shields.io/npm/l/@karin-js/platform-h3)](https://github.com/your-username/karin-js/blob/main/LICENSE)
+
+---
+
+## Overview
+
+`@karin-js/platform-h3` provides the integration layer between Karin-JS and the H3 web framework. This package allows you to leverage the powerful features of Karin-JS, such as dependency injection and a module-less architecture, while building your web applications with H3.
+
+## Installation
+
+Install `@karin-js/platform-h3` along with `@karin-js/core` and its peer dependencies:
 
 ```bash
-bun install
+bun add @karin-js/core @karin-js/platform-h3 reflect-metadata tsyringe
 ```
 
-To run:
+## Quick Start
+
+To use the H3 adapter, you'll pass `H3Adapter` to `KarinFactory.create` when bootstrapping your Karin-JS application.
+
+**1. Create your controller**
+
+`src/users.controller.ts`
+
+```typescript
+import { Controller, Get } from "@karin-js/core";
+
+@Controller("/users")
+export class UsersController {
+  @Get("/")
+  getUsers() {
+    return [{ id: 1, name: "John Doe" }];
+  }
+
+  @Get("/:id")
+  getUser(id: string) {
+    return { id, name: `User ${id}` };
+  }
+}
+```
+
+**2. Bootstrap the application with H3Adapter**
+
+`src/main.ts`
+
+```typescript
+import "reflect-metadata";
+import { KarinFactory } from "@karin-js/core";
+import { H3Adapter } from "@karin-js/platform-h3";
+import { UsersController } from "./users.controller";
+
+async function bootstrap() {
+  const app = await KarinFactory.create(H3Adapter, {
+    controllers: [UsersController],
+  });
+
+  app.listen(3000, () => {
+    console.log("🦊 Karin-JS server running on http://localhost:3000");
+  });
+}
+
+bootstrap();
+```
+
+**3. Run the server**
 
 ```bash
-bun run index.ts
+bun run src/main.ts
 ```
 
-This project was created using `bun init` in bun v1.2.10. [Bun](https://bun.sh) is a fast all-in-one JavaScript runtime.
+## Contributing
+
+Karin-JS is currently in its early stages (Alpha v0.0.1) and we welcome all contributions. Please feel free to open issues or pull requests.
+
+## License
+
+Karin-JS is [MIT licensed](https://github.com/your-username/karin-js/blob/main/LICENSE).

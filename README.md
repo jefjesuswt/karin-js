@@ -3,8 +3,8 @@
 The Enterprise Framework for Bun. Built for speed, designed for sanity.
 
 [![NPM Version](https://img.shields.io/npm/v/@karin-js/core)](https://www.npmjs.com/package/@karin-js/core)
-[![Build Status](https://img.shields.io/github/actions/workflow/status/your-username/karin-js/ci.yml?branch=main)](https://github.com/your-username/karin-js/actions)
-[![Bun Version](https://img.shields.io/badge/bun-%3E%3D1.0.0-lightgrey?logo=bun)](https://bun.sh/)
+
+[![Bun Version](https://img.shields.io/badge/bun-%3E%3D1.2.21-lightgrey?logo=bun)](https://bun.sh/)
 [![License](https://img.shields.io/npm/l/@karin-js/core)](https://github.com/your-username/karin-js/blob/main/LICENSE)
 
 ---
@@ -41,7 +41,7 @@ _Karin-JS: ~1.01ms | NestJS: ~10.28ms_
 Get started with Karin-JS by installing the core packages:
 
 ```bash
-bun add @karin-js/core @karin-js/platform-h3 reflect-metadata tsyringe
+bun add @karin-js/core @karin-js/platform-h3
 ```
 
 ## Quick Start

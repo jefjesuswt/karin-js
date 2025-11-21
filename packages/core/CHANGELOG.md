@@ -1,5 +1,11 @@
 # @karin-js/core
 
+## 0.0.4
+
+### Patch Changes
+
+- refactor: changed README.md
+
 ## 0.0.3
 
 ### Patch Changes
