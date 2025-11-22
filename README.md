@@ -42,16 +42,11 @@ Karin-JS aims for world-class performance, enabled by Bun and careful optimizati
 
 Karin-JS, using H3Adapter, handled over **10 times more requests per second** than a standard NestJS application, with an average latency nearly ten times lower.
 
-### Benchmark Images
+### Raw Console Output Images (Verification)
 
-| Karin-JS (H3) | Karin-JS (Hono) | NestJS |
-| :-----------: | :-------------: | :----: |
-
-<img src="./docs/oha-karinjs-h3-bench.png" width="250" alt="Karin-JS H3 Benchmark" />
-<img src="./docs/oha-karinjs-hono-bench.png" width="250" alt="Karin-JS Hono Benchmark" />
-<img src="./docs/oha-nestjs-bench.png" width="250" alt="NestJS Benchmark" />
-
-</p>
+|                                     Karin-JS (H3)                                     |                                      Karin-JS (Hono)                                      |                                    NestJS                                    |
+| :-----------------------------------------------------------------------------------: | :---------------------------------------------------------------------------------------: | :--------------------------------------------------------------------------: |
+| <img src="./docs/oha-karinjs-h3-bench.png" width="250" alt="Karin-JS H3 Benchmark" /> | <img src="./docs/oha-karinjs-hono-bench.png" width="250" alt="Karin-JS Hono Benchmark" /> | <img src="./docs/oha-nestjs-bench.png" width="250" alt="NestJS Benchmark" /> |
 
 </details>
 
