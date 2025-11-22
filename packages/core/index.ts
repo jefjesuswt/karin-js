@@ -1,6 +1,11 @@
 import "reflect-metadata";
 export * from "./src/decorators";
+export * from "./src/decorators/core";
 export * from "./src/logger";
 export * from "./src/karin.factory";
-export { injectable, inject, singleton } from "tsyringe";
-export const VERSION = "0.0.1";
+export * from "./src/karin.application";
+export * from "./src/interfaces";
+export * from "./src/pipes/zod-validation.pipe";
+export * from "./src/exceptions/http.exception";
+export { injectable, inject, singleton, container } from "tsyringe";
+export const VERSION = "0.0.5";

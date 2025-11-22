@@ -1,8 +1,9 @@
 import { KarinFactory } from "@karin-js/core";
-import { H3Adapter } from "@karin-js/platform-h3";
+import { HonoAdapter } from "../../../packages/platform-hono";
+import { H3Adapter } from "../../../packages/platform-h3";
 
 async function bootstrap() {
-  const app = await KarinFactory.create(new H3Adapter(), {
+  const app = await KarinFactory.create(new HonoAdapter(), {
     scan: "./src/**/*.controller.ts",
   });
 

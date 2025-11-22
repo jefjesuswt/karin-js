@@ -1,6 +1,6 @@
 # @karin-js/platform-h3 🦊
 
-The H3 platform adapter for Karin-JS, the Enterprise Framework for Bun.
+The H3 platform adapter for Karin-JS, offering **maximum performance** in traditional server environments (Bun, Node.js).
 
 [![NPM Version](https://img.shields.io/npm/v/@karin-js/platform-h3)](https://www.npmjs.com/package/@karin-js/platform-h3)
 [![Build Status](https://img.shields.io/github/actions/workflow/status/your-username/karin-js/ci.yml?branch=main)](https://github.com/your-username/karin-js/actions)
@@ -11,7 +11,7 @@ The H3 platform adapter for Karin-JS, the Enterprise Framework for Bun.
 
 ## Overview
 
-`@karin-js/platform-h3` provides the integration layer between Karin-JS and the H3 web framework. This package allows you to leverage the powerful features of Karin-JS, such as dependency injection and a module-less architecture, while building your web applications with H3.
+`@karin-js/platform-h3` provides the integration layer between Karin-JS and the H3 web framework. It is the fastest adapter available for Karin-JS.
 
 ## Installation
 
@@ -23,7 +23,7 @@ bun add @karin-js/core @karin-js/platform-h3 reflect-metadata tsyringe
 
 ## Quick Start
 
-To use the H3 adapter, you'll pass `H3Adapter` to `KarinFactory.create` when bootstrapping your Karin-JS application.
+To use the H3 adapter, you'll pass an instance of `H3Adapter` to `KarinFactory.create` when bootstrapping your Karin-JS application.
 
 **1. Create your controller**
 
@@ -38,15 +38,10 @@ export class UsersController {
   getUsers() {
     return [{ id: 1, name: "John Doe" }];
   }
-
-  @Get("/:id")
-  getUser(id: string) {
-    return { id, name: `User ${id}` };
-  }
 }
 ```
 
-**2. Bootstrap the application with H3Adapter**
+**2. Bootstrap the application**
 
 `src/main.ts`
 
@@ -54,16 +49,14 @@ export class UsersController {
 import "reflect-metadata";
 import { KarinFactory } from "@karin-js/core";
 import { H3Adapter } from "@karin-js/platform-h3";
-import { UsersController } from "./users.controller";
 
 async function bootstrap() {
-  const app = await KarinFactory.create(H3Adapter, {
-    controllers: [UsersController],
+  // We use the 'scan' option for automatic controller discovery (module-less architecture)
+  const app = await KarinFactory.create(new H3Adapter(), {
+    scan: "./src/**/*.controller.ts",
   });
 
-  app.listen(3000, () => {
-    console.log("🦊 Karin-JS server running on http://localhost:3000");
-  });
+  app.listen(3000); // Now supports optional host argument: app.listen(3000, '0.0.0.0');
 }
 
 bootstrap();
@@ -77,7 +70,7 @@ bun run src/main.ts
 
 ## Contributing
 
-Karin-JS is currently in its early stages (Alpha v0.0.1) and we welcome all contributions. Please feel free to open issues or pull requests.
+Karin-JS is currently in its early stages and we welcome all contributions.
 
 ## License
 

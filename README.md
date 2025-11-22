@@ -1,55 +1,69 @@
 # Karin-JS 🦊
 
-The Enterprise Framework for Bun. Built for speed, designed for sanity.
+A modern, enterprise-friendly backend framework for Bun. Lightweight. Fast. Designed for developers who want simplicity and power.
 
 [![NPM Version](https://img.shields.io/npm/v/@karin-js/core)](https://www.npmjs.com/package/@karin-js/core)
-
-[![Bun Version](https://img.shields.io/badge/bun-%3E%3D1.2.21-lightgrey?logo=bun)](https://bun.sh/)
+[![Bun Version](https://img.shields.io/badge/bun-%3E%3D1.0.0-lightgrey?logo=bun)](https://bun.sh/)
 [![License](https://img.shields.io/npm/l/@karin-js/core)](https://github.com/your-username/karin-js/blob/main/LICENSE)
 
----
+## What is Karin-JS?
 
-## Why Karin-JS?
+Karin-JS is a humble, alternative backend framework inspired by emerging JavaScript technologies and new developer experience patterns. It is designed around a file-based, module-less architecture, focusing on speed and a clean mental model. Karin-JS attempts to offer a familiar, yet refreshingly simple approach—making it ideal for modern API projects.
 
-Karin-JS is a next-generation, enterprise-ready framework for Node.js built on top of Bun. It's designed from the ground up to provide a development experience that is both incredibly fast and easy to maintain.
+- **⚡ Built for Bun:** Fully leverages Bun runtime for maximum performance.
+- **🗂️ Module-less and feature-oriented:** Organize by "features" instead of modules for cleaner, more maintainable code.
+- **💉 Dependency Injection:** Uses `tsyringe` for familiar and robust DI, taking inspiration from enterprise languages.
+- **🔐 Full Type Safety:** Built in TypeScript for safe, reliable code.
+- **🔌 Pluggable Adapters:** Easily swap between H3 (raw speed) and Hono (Edge/serverless) backends.
 
-- **🚀 10x Faster than NestJS:** Leveraging the power of Bun and a highly optimized core, Karin-JS delivers unparalleled performance.
-- **📦 Module-less Architecture:** Say goodbye to complex module systems. Karin-JS uses a simple, intuitive structure that makes your codebase cleaner and easier to reason about.
-- **💉 True Dependency Injection:** With `tsyringe`, Karin-JS implements a robust and feature-rich dependency injection system, just like in enterprise languages like Java or C#.
-- **🔒 Fully Type-Safe:** Written in TypeScript, Karin-JS provides a strongly-typed API to catch errors at compile time, not runtime.
+## Why Another Framework?
+
+Frameworks like NestJS are extremely mature and proven; Karin-JS is a much newer, lighter alternative. It's not a "replacement" but another option for those who want to explore simpler patterns or leverage Bun’s unique speed.
+
+- Module-less design simplifies onboarding and structure.
+- Automatic controller file-scanning—no need for manual registration.
+- Adapters let you pick the backend platform with one line of config.
 
 ## Benchmark
 
-The results speak for themselves. In a head-to-head comparison with NestJS, Karin-JS demonstrates a significant performance advantage.
+Karin-JS aims for world-class performance, enabled by Bun and careful optimization. Here’s a comparison using a basic benchmark handler:
+
+| Adapter          | Avg. Latency (ms) | Requests/sec | Slowest (ms) | Fastest (ms) |
+| :--------------- | :---------------- | :----------- | :----------- | :----------- |
+| **H3 Adapter**   | 0.99              | 100,469      | 9.06         | 0.05         |
+| **Hono Adapter** | 1.23              | 81,061       | 13.29        | 0.04         |
+| **NestJS**       | 10.05             | 9,941        | 602.08       | 2.85         |
+
+<details>
+<summary>See benchmark details</summary>
 
 - **Hardware:** AMD Ryzen 5 5600X, Arch Linux
+- **Each test:** 100,000 requests, 100 concurrency
+- **Sample endpoint:** `GET /bench` (returns JSON, no DB)
 
-### Throughput (Requests/Second)
+Karin-JS, using H3Adapter, handled over **10 times more requests per second** than a standard NestJS application, with an average latency nearly ten times lower.
 
-![Throughput Benchmark](./docs/assets/benchmark_throughput.png)
-_Karin-JS: ~97,609 req/sec | NestJS: ~9,715 req/sec_
+### Benchmark Images
 
-### Latency (ms)
+<p align="center">
+  <img src="./docs/oha-karinjs-h3-bench.png" width="300" alt="Karin-JS H3 Benchmark" />
+  <img src="./docs/oha-karinjs-hono-bench.png" width="300" alt="Karin-JS Hono Benchmark" />
+  <img src="./docs/oha-nestjs-bench.png" width="300" alt="NestJS Benchmark" />
+</p>
 
-![Latency Benchmark](./docs/assets/benchmark_latency.png)
-_Karin-JS: ~1.01ms | NestJS: ~10.28ms_
-
-> **Results:** Karin-JS handles 10x more requests per second than NestJS, with a latency of minus 10x.
+</details>
 
 ## Installation
 
-Get started with Karin-JS by installing the core packages:
-
 ```bash
 bun add @karin-js/core @karin-js/platform-h3
+# Or for Edge:
+bun add @karin-js/core @karin-js/platform-hono
 ```
 
 ## Quick Start
 
-Create a fully functional HTTP server in just a few lines of code.
-
-**1. Create your controller**
-
+**1. Define a controller**
 `src/users.controller.ts`
 
 ```typescript
@@ -61,46 +75,30 @@ export class UsersController {
   getUsers() {
     return [{ id: 1, name: "John Doe" }];
   }
-
-  @Get("/:id")
-  getUser(id: string) {
-    return { id, name: `User ${id}` };
-  }
 }
 ```
 
-**2. Bootstrap the application**
-
+**2. Bootstrap**
 `src/main.ts`
 
 ```typescript
 import "reflect-metadata";
 import { KarinFactory } from "@karin-js/core";
 import { H3Adapter } from "@karin-js/platform-h3";
-import { UsersController } from "./users.controller";
+// or: import { HonoAdapter } from "@karin-js/platform-hono";
 
 async function bootstrap() {
-  const app = await KarinFactory.create(H3Adapter, {
-    controllers: [UsersController],
+  const app = await KarinFactory.create(new H3Adapter(), {
+    scan: "./src/**/*.controller.ts",
   });
-
-  app.listen(3000, () => {
-    console.log("🦊 Karin-JS server running on http://localhost:3000");
-  });
+  app.listen(3000);
 }
-
 bootstrap();
-```
-
-**3. Run the server**
-
-```bash
-bun run src/main.ts
 ```
 
 ## Contributing
 
-Karin-JS is currently in its early stages (Alpha v0.0.1) and we welcome all contributions. Please feel free to open issues or pull requests.
+Karin-JS welcomes contributors, testers, and feedback at all stages!
 
 ## License
 
