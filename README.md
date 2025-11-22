@@ -47,7 +47,6 @@ Karin-JS, using H3Adapter, handled over **10 times more requests per second** th
 | Karin-JS (H3) | Karin-JS (Hono) | NestJS |
 | :-----------: | :-------------: | :----: |
 
-<p align="center">
 <img src="./docs/oha-karinjs-h3-bench.png" width="200" alt="Karin-JS H3 Benchmark" />
 <img src="./docs/oha-karinjs-hono-bench.png" width="200" alt="Karin-JS Hono Benchmark" />
 <img src="./docs/oha-nestjs-bench.png" width="200" alt="NestJS Benchmark" />
