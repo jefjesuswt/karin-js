@@ -9,32 +9,50 @@ The core library for Karin-JS, the Enterprise Framework for Bun. Built for speed
 
 ---
 
-## Why Karin-JS?
+## What is Karin-JS?
 
-Karin-JS is a next-generation, enterprise-ready framework for Node.js built on top of Bun. It's designed from the ground up to provide a development experience that is both incredibly fast and easy to maintain. `@karin-js/core` provides the fundamental building blocks for this experience.
+Karin-JS is a humble, alternative backend framework inspired by emerging JavaScript technologies and new developer experience patterns. It is designed around a file-based, module-less architecture, focusing on speed and a clean mental model. Karin-JS attempts to offer a familiar, yet refreshingly simple approach—making it ideal for modern API projects.
 
-- **🚀 10x Faster than NestJS:** Leveraging the power of Bun and a highly optimized core, Karin-JS delivers unparalleled performance.
-- **📦 Module-less Architecture:** Say goodbye to complex module systems. Karin-JS uses a simple, intuitive structure that makes your codebase cleaner and easier to reason about.
-- **💉 True Dependency Injection:** With `tsyringe`, Karin-JS implements a robust and feature-rich dependency injection system, just like in enterprise languages like Java or C#.
-- **🔒 Fully Type-Safe:** Written in TypeScript, Karin-JS provides a strongly-typed API to catch errors at compile time, not runtime.
+- **⚡ Built for Bun:** Fully leverages Bun runtime for maximum performance.
+- **🗂️ Module-less and feature-oriented:** Organize by "features" instead of modules for cleaner, more maintainable code.
+- **💉 Dependency Injection:** Uses `tsyringe` for familiar and robust DI, taking inspiration from enterprise languages.
+- **🔐 Full Type Safety:** Built in TypeScript for safe, reliable code.
+- **🔌 Pluggable Adapters:** Easily swap between H3 (raw speed) and Hono (Edge/serverless) backends.
+
+## Why Another Framework?
+
+Frameworks like NestJS are extremely mature and proven; Karin-JS is a much newer, lighter alternative. It's not a "replacement" but another option for those who want to explore simpler patterns or leverage Bun’s unique speed.
+
+- Module-less design simplifies onboarding and structure.
+- Automatic controller file-scanning—no need for manual registration.
+- Adapters let you pick the backend platform with one line of config.
 
 ## Benchmark
 
-The results speak for themselves. In a head-to-head comparison with NestJS, Karin-JS demonstrates a significant performance advantage, thanks to its optimized core.
+Karin-JS aims for world-class performance, enabled by Bun and careful optimization. Here’s a comparison using a basic benchmark handler:
+
+| Adapter          | Avg. Latency (ms) | Requests/sec | Slowest (ms) | Fastest (ms) |
+| :--------------- | :---------------- | :----------- | :----------- | :----------- |
+| **H3 Adapter**   | 1.0064            | 98,505       | 16.1         | 0.059        |
+| **Hono Adapter** | 1.27              | 77,814       | 21.69        | 0.073        |
+| **NestJS**       | 10.05             | 9,940        | 602.08       | 2.85         |
+
+<details>
+<summary>See benchmark details</summary>
 
 - **Hardware:** AMD Ryzen 5 5600X, Arch Linux
+- **Each test:** 100,000 requests, 100 concurrency
+- **Sample endpoint:** `GET /bench` (returns JSON, no DB)
 
-### Throughput (Requests/Second)
+Karin-JS, using H3Adapter, handled over **10 times more requests per second** than a standard NestJS application, with an average latency nearly ten times lower.
 
-![Throughput Benchmark](./docs/assets/benchmark_throughput.png)
-_Karin-JS: ~97,609 req/sec | NestJS: ~9,715 req/sec_
+### Raw Console Output Images (Verification)
 
-### Latency (ms)
+|                                     Karin-JS (H3)                                     |                                      Karin-JS (Hono)                                      |                                    NestJS                                    |
+| :-----------------------------------------------------------------------------------: | :---------------------------------------------------------------------------------------: | :--------------------------------------------------------------------------: |
+| <img src="./docs/oha-karinjs-h3-bench.png" width="250" alt="Karin-JS H3 Benchmark" /> | <img src="./docs/oha-karinjs-hono-bench.png" width="250" alt="Karin-JS Hono Benchmark" /> | <img src="./docs/oha-nestjs-bench.png" width="250" alt="NestJS Benchmark" /> |
 
-![Latency Benchmark](./docs/assets/benchmark_latency.png)
-_Karin-JS: ~1.01ms | NestJS: ~10.28ms_
-
-> **Results:** Karin-JS handles 10x more requests per second than NestJS, with a latency of minus 10x.
+</details>
 
 ## Installation
 
@@ -82,7 +100,7 @@ export class UsersController {
 ```typescript
 import "reflect-metadata";
 import { KarinFactory } from "@karin-js/core";
-import { H3Adapter } from "@karin-js/platform-h3"; 
+import { H3Adapter } from "@karin-js/platform-h3";
 import { UsersController } from "./users.controller";
 
 async function bootstrap() {

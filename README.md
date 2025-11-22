@@ -29,9 +29,9 @@ Karin-JS aims for world-class performance, enabled by Bun and careful optimizati
 
 | Adapter          | Avg. Latency (ms) | Requests/sec | Slowest (ms) | Fastest (ms) |
 | :--------------- | :---------------- | :----------- | :----------- | :----------- |
-| **H3 Adapter**   | 0.99              | 100,469      | 9.06         | 0.05         |
-| **Hono Adapter** | 1.23              | 81,061       | 13.29        | 0.04         |
-| **NestJS**       | 10.05             | 9,941        | 602.08       | 2.85         |
+| **H3 Adapter**   | 1.0064            | 98,505       | 16.1         | 0.059        |
+| **Hono Adapter** | 1.27              | 77,814       | 21.69        | 0.073        |
+| **NestJS**       | 10.05             | 9,940        | 602.08       | 2.85         |
 
 <details>
 <summary>See benchmark details</summary>
