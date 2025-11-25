@@ -1,22 +1,23 @@
-import { type CanActivate, type IHttpAdapter } from "@karin-js/core";
-import { injectable } from "tsyringe";
+// examples/playground/src/guards/auth.guard.ts
+import {
+  UnauthorizedException,
+  type CanActivate,
+  type ExecutionContext,
+} from "@karin-js/core";
 
-@injectable()
 export class AuthGuard implements CanActivate {
-  async canActivate(context: any): Promise<boolean> {
-    // Aquí es donde brilla nuestra abstracción:
-    // El 'context' es H3Event o Hono Context, pero no sabemos cuál es.
-    // En el futuro, pasaremos un ExecutionContext unificado.
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    const request = context.switchToHttp().getRequest();
+    // Nota: Como getRequest devuelve el objeto nativo (Request de Bun/Fetch),
+    // podemos usar la API estándar de Request.
 
-    // Por ahora, para probar, asumimos que el adaptador o el framework
-    // nos permite acceder a los headers de alguna forma estándar o
-    // inyectaremos el adaptador si fuera necesario.
+    const authHeader = request.headers.get("Authorization");
 
-    // NOTA: Como aún no hemos estandarizado el ExecutionContext en el Factory
-    // para los Guards, vamos a hacer una validación simple sobre el objeto.
-    // (Esto es algo que notaremos en el Roadmap que falta refinar).
+    if (!authHeader) {
+      throw new UnauthorizedException("No token provided");
+    }
 
-    console.log("🛡️ AuthGuard verificando...");
-    return true; // Permitimos pasar por ahora para probar
+    // Aquí validarías el token real
+    return true;
   }
 }
