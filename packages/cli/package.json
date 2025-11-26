@@ -1,0 +1,22 @@
+{
+  "name": "@karin-js/cli",
+  "module": "index.ts",
+  "type": "module",
+  "bin": {
+    "karin": "./bin/karin.ts"
+  },
+  "scripts": {
+    "dev": "bun run src/cli.ts",
+    "build": "bun build ./bin/karin.ts --outfile=dist/karin.js --target=bun"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.3"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "cac": "^6.7.14",
+    "picocolors": "^1.1.1"
+  }
+}
