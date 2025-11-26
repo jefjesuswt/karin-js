@@ -3,6 +3,7 @@ import type {
   CanActivate,
   IHttpAdapter,
   KarinPlugin,
+  ExceptionFilter,
 } from "./interfaces";
 import { Logger } from "./logger";
 
@@ -11,6 +12,7 @@ export class KarinApplication {
   private globalPipes: PipeTransform[] = [];
   private globalGuards: CanActivate[] = [];
   private plugins: KarinPlugin[] = [];
+  private globalFilters: ExceptionFilter[] = [];
 
   constructor(private readonly adapter: IHttpAdapter) {}
 
@@ -20,6 +22,14 @@ export class KarinApplication {
 
   public useGlobalGuards(...guards: CanActivate[]) {
     this.globalGuards.push(...guards);
+  }
+
+  public useGlobalFilters(...filters: ExceptionFilter[]) {
+    this.globalFilters.push(...filters);
+  }
+
+  public getGlobalFilters() {
+    return this.globalFilters;
   }
 
   public enableCors(options?: any) {

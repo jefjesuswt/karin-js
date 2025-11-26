@@ -4,3 +4,6 @@ export const PATH_METADATA = "karin:path";
 export const PARAMS_METADATA = "karin:params";
 export const GUARDS_METADATA = "karin:guards";
 export const PIPES_METADATA = "karin:pipes";
+export const FILTER_METADATA = "karin:filters";
+export const FILTER_CATCH_EXCEPTIONS = "karin:filter-catch";
+export const INTERCEPTORS_METADATA = "karin:interceptors";

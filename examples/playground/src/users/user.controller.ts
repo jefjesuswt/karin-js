@@ -12,7 +12,7 @@ import {
 import { AuthGuard } from "../guards/auth.guard";
 import { CreateUserSchema, type CreateUserDto } from "./dtos/create-user.dto";
 
-@Controller("/features")
+@Controller("/users")
 @UseGuards(AuthGuard) // 1. Prueba de Guard a nivel de clase
 export class FeaturesController {
   @Get("/hello/:name")
