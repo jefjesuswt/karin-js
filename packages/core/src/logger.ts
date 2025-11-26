@@ -1,49 +1,71 @@
 import pc from "picocolors";
 
+export enum LogLevel {
+  DEBUG = 0,
+  INFO = 1,
+  WARN = 2,
+  ERROR = 3,
+  SILENT = 4,
+}
+
 export class Logger {
+  private static level: LogLevel = LogLevel.INFO;
   private context: string;
 
   constructor(context: string) {
     this.context = context;
   }
 
+  public static setLevel(level: LogLevel) {
+    Logger.level = level;
+  }
+
+  // Método genérico
   log(message: string) {
-    this.printMessage("LOG", message, pc.green);
+    this.print(LogLevel.INFO, message, pc.green, "LOG  ");
+  }
+
+  // 👇 ESTE ERA EL MÉTODO QUE FALTABA
+  info(message: string) {
+    if (Logger.level <= LogLevel.INFO) {
+      this.print(LogLevel.INFO, message, pc.blue, "INFO ");
+    }
   }
 
   error(message: string, trace?: string) {
-    this.printMessage("ERROR", message, pc.red);
-    if (trace) {
-      console.error(pc.red(trace));
+    this.print(LogLevel.ERROR, message, pc.red, "ERROR");
+    if (trace && Logger.level <= LogLevel.ERROR) {
+      console.error(pc.dim(trace));
     }
   }
 
   warn(message: string) {
-    this.printMessage("WARN", message, pc.yellow);
+    this.print(LogLevel.WARN, message, pc.yellow, "WARN ");
   }
 
-  info(message: string) {
-    this.printMessage("INFO", message, pc.blue); // O pc.cyan
+  debug(message: string) {
+    this.print(LogLevel.DEBUG, message, pc.magenta, "DEBUG");
   }
 
-  private printMessage(
-    level: string,
+  private print(
+    level: LogLevel,
     message: string,
-    colorFn: (s: string) => string
+    colorFn: (s: string) => string,
+    levelLabel: string
   ) {
-    const timestamp = new Date().toLocaleString();
-    const pid = process.pid;
-    const appName = pc.green("[Karin]");
+    if (Logger.level > level) return;
 
-    // Formato: [Karin] PID - FECHA   LEVEL [Context] Mensaje
-    const formattedLevel = colorFn(level.padEnd(7)); // Alineación
-    const formattedContext = pc.yellow(`[${this.context}]`);
-    const formattedMessage = colorFn(message);
+    // Diseño: 🦊 Karin  HH:MM:SS  LEVEL  [Context]  Mensaje
+
+    const prefix = pc.bold(pc.cyan("[🦊 Karin]"));
+    const time = new Date().toLocaleTimeString();
+    const grayTime = pc.dim(time);
+
+    const coloredLevel = pc.bold(colorFn(levelLabel));
+    const context = pc.yellow(this.context.padEnd(15));
 
     console.log(
-      `${appName} ${pc.yellow(
-        pid.toString()
-      )}  - ${timestamp}     ${formattedLevel} ${formattedContext} ${formattedMessage}`
+      `${prefix}  ${grayTime}  ${coloredLevel}  ${context} [${message}]`
     );
   }
 }

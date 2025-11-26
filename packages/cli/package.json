@@ -16,7 +16,9 @@
     "typescript": "^5"
   },
   "dependencies": {
+    "@clack/prompts": "^0.11.0",
     "cac": "^6.7.14",
+    "giget": "^2.0.0",
     "picocolors": "^1.1.1"
   }
 }
