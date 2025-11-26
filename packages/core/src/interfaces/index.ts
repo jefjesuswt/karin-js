@@ -17,3 +17,5 @@ export interface Type<T = any> extends Function {
 }
 
 export * from "./http-adapter.interface";
+export * from "./execution-context.interface";
+export * from "./plugin.interface";
