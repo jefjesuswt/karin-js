@@ -1,4 +1,5 @@
-import { Logger, type IHttpAdapter } from "@karin-js/core";
+// 👇 Agregamos BadRequestException
+import { Logger, type IHttpAdapter, BadRequestException } from "@karin-js/core";
 import {
   H3,
   handleCors,
@@ -55,7 +56,11 @@ export class H3Adapter implements IHttpAdapter<H3Event> {
   }
 
   async readBody(ctx: H3Event) {
-    return readBody(ctx);
+    try {
+      return await readBody(ctx);
+    } catch (error) {
+      throw new BadRequestException("Invalid JSON body format");
+    }
   }
 
   getQuery(ctx: H3Event) {
@@ -67,6 +72,7 @@ export class H3Adapter implements IHttpAdapter<H3Event> {
   }
 
   getHeaders(ctx: H3Event) {
+    // Conversión segura de headers
     return Object.fromEntries(ctx.req.headers.entries());
   }
 
@@ -87,7 +93,6 @@ export class H3Adapter implements IHttpAdapter<H3Event> {
 
     Bun.serve({
       port,
-
       hostname: host,
       async fetch(req) {
         return h3App.fetch(req);
