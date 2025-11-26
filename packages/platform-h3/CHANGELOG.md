@@ -1,5 +1,16 @@
 # @karinjs/platform-h3
 
+## 0.1.0
+
+### Minor Changes
+
+- f7f92ba: feat: Hardened JSON parsing & alignment with Core 0.2.0.
+
+### Patch Changes
+
+- Updated dependencies [f7f92ba]
+  - @karin-js/core@0.2.0
+
 ## 0.0.6
 
 ### Patch Changes

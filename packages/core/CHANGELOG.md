@@ -1,5 +1,11 @@
 # @karin-js/core
 
+## 0.2.0
+
+### Minor Changes
+
+- f7f92ba: feat!: Rename plugin hooks to onPluginInit/Destroy, add Interceptors, Service decorator & improved Logger.
+
 ## 0.1.4
 
 ### Patch Changes
