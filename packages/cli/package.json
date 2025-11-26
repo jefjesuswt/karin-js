@@ -2,12 +2,18 @@
   "name": "@karin-js/cli",
   "module": "index.ts",
   "type": "module",
+  "version": "0.0.1",
   "bin": {
-    "karin": "./bin/karin.ts"
+    "karin": "./dist/karin.js"
   },
+  "files": [
+    "dist",
+    "bin"
+  ],
   "scripts": {
     "dev": "bun run src/cli.ts",
-    "build": "bun build ./bin/karin.ts --outfile=dist/karin.js --target=bun"
+    "build": "bun build ./bin/karin.ts --outfile=dist/karin.js --target=bun --packages external",
+    "prepublishOnly": "bun run build"
   },
   "devDependencies": {
     "@types/bun": "^1.3.3"

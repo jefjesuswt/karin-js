@@ -20,6 +20,7 @@ const cli = cac("karin");
 // 👇 CONFIGURACIÓN DE TEMPLATES
 // Cambia esto por tu organización o usuario de GitHub donde alojarás los starters
 const TEMPLATE_OWNER = "jefjesuswt";
+// Patrón: github:usuario/karin-template-{tipo}
 
 cli
   .command("new [name]", "Create a new Karin-JS project")
@@ -27,6 +28,7 @@ cli
     console.clear();
     intro(pc.bgCyan(pc.black(" 🦊 Karin-JS Creator ")));
 
+    // 1. Obtener nombre del proyecto
     if (!name) {
       const namePrompt = await text({
         message: "What is the name of your project?",
@@ -46,6 +48,7 @@ cli
       name = namePrompt;
     }
 
+    // 2. Seleccionar Template
     const templateType = await select({
       message: "Pick a project type.",
       options: [
@@ -59,6 +62,11 @@ cli
           label: "High Performance",
           hint: "Uses H3 Adapter (Recommended for Node/Bun)",
         },
+        {
+          value: "bare",
+          label: "Barebones",
+          hint: "Minimal setup without extra plugins",
+        },
       ],
     });
 
@@ -67,6 +75,7 @@ cli
       process.exit(0);
     }
 
+    // 3. Preguntar por Git
     const initGit = await confirm({
       message: "Initialize a new git repository?",
       initialValue: true,
@@ -77,6 +86,7 @@ cli
       process.exit(0);
     }
 
+    // 4. Preguntar por Dependencias
     const installDeps = await confirm({
       message: "Install dependencies now? (via Bun)",
       initialValue: true,
