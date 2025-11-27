@@ -1,5 +1,11 @@
 # @karin-js/core
 
+## 0.4.0
+
+### Minor Changes
+
+- feat: added config plugin and minor fixes for compatibility
+
 ## 0.3.1
 
 ### Patch Changes
