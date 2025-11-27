@@ -5,6 +5,7 @@ import { cors } from "hono/cors";
 
 export class HonoAdapter implements IHttpAdapter<Context, Request, Context> {
   private app: Hono;
+  private server: any;
   private logger = new Logger("HonoAdapter");
 
   constructor() {
@@ -52,13 +53,21 @@ export class HonoAdapter implements IHttpAdapter<Context, Request, Context> {
   // --- Server Start ---
 
   listen(port: number, host?: string) {
-    return Bun.serve({
+    this.server = Bun.serve({
       port,
       hostname: host,
       fetch: this.app.fetch,
     });
+
+    return this.server;
   }
 
+  close() {
+    if (this.server && typeof this.server.stop === "function") {
+      this.server.stop();
+      this.logger.log("Hono Server stopped");
+    }
+  }
   // --- Configuración ---
 
   enableCors(options?: any) {

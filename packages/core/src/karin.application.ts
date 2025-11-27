@@ -18,6 +18,7 @@ export class KarinApplication {
   private server?: any; // Referencia al servidor nativo (Bun server)
   private isShuttingDown = false;
   private activeRequests = new Set<Promise<any>>();
+  private shutdownHooksRegistered = false;
 
   constructor(private readonly adapter: IHttpAdapter) {}
 
@@ -126,7 +127,18 @@ export class KarinApplication {
   }
 
   private registerShutdownHooks() {
+    if (this.shutdownHooksRegistered) return;
+    this.shutdownHooksRegistered = true;
+
     const signals: NodeJS.Signals[] = ["SIGTERM", "SIGINT"];
+
+    signals.forEach((signal) => {
+      // Usamos .once en lugar de .on para ser más limpios
+      process.once(signal, () => {
+        this.logger.warn(`Received ${signal}, starting graceful shutdown...`);
+        this.shutdown(signal);
+      });
+    });
 
     signals.forEach((signal) => {
       process.on(signal, () => {

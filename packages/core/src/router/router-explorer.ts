@@ -158,7 +158,7 @@ export class RouterExplorer {
       ...app.getGlobalFilters(),
     ]
       .map((f) => (isConstructor(f) ? container.resolve(f) : f))
-      .filter((f) => isExceptionFilter(f)); // Validación temprana
+      .filter((f): f is ExceptionFilter => isExceptionFilter(f));
 
     // Ordenamos filtros una vez al inicio
     resolvedFilters.sort((a, b) => {

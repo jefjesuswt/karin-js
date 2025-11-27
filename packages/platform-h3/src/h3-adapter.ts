@@ -15,6 +15,7 @@ export class H3Adapter implements IHttpAdapter<H3Event> {
   private app: H3;
   private logger = new Logger("H3Adapter");
   private middlewares: Function[] = [];
+  private server: any;
 
   constructor() {
     this.app = new H3();
@@ -91,12 +92,21 @@ export class H3Adapter implements IHttpAdapter<H3Event> {
   listen(port: number, host?: string) {
     const h3App = this.app;
 
-    return Bun.serve({
+    this.server = Bun.serve({
       port,
       hostname: host,
       async fetch(req) {
         return h3App.fetch(req);
       },
     });
+
+    return this.server;
+  }
+
+  close() {
+    if (this.server && typeof this.server.stop === "function") {
+      this.server.stop();
+      this.logger.log("H3 Server stopped");
+    }
   }
 }
