@@ -1,5 +1,13 @@
 # @karin-js/platform-hono
 
+## 0.3.1
+
+### Patch Changes
+
+- minor optimizations
+- Updated dependencies
+  - @karin-js/core@0.3.1
+
 ## 0.3.0
 
 ### Minor Changes

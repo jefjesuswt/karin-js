@@ -1,5 +1,11 @@
 # @karin-js/cli
 
+## 0.3.1
+
+### Patch Changes
+
+- minor optimizations
+
 ## 0.3.0
 
 ### Minor Changes

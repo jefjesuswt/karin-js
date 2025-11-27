@@ -1,5 +1,13 @@
 # @karinjs/platform-h3
 
+## 0.2.1
+
+### Patch Changes
+
+- minor optimizations
+- Updated dependencies
+  - @karin-js/core@0.3.1
+
 ## 0.2.0
 
 ### Minor Changes
