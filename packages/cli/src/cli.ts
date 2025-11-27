@@ -13,22 +13,29 @@ import {
 } from "@clack/prompts";
 import { downloadTemplate } from "giget";
 import { join } from "path";
+import { GeneratorService } from "./services/generator.service";
+import { existsSync, readFileSync } from "fs";
 
 const version = "0.0.1";
 const cli = cac("karin");
 
-// 👇 CONFIGURACIÓN DE TEMPLATES
-// Cambia esto por tu organización o usuario de GitHub donde alojarás los starters
 const TEMPLATE_OWNER = "jefjesuswt";
-// Patrón: github:usuario/karin-template-{tipo}
 
 cli
   .command("new [name]", "Create a new Karin-JS project")
-  .action(async (name) => {
+  .action(async (type, name, options) => {
     console.clear();
     intro(pc.bgCyan(pc.black(" 🦊 Karin-JS Creator ")));
 
-    // 1. Obtener nombre del proyecto
+    const generator = new GeneratorService(process.cwd(), options.dryRun);
+
+    try {
+      await generator.generate(type, name);
+    } catch (error: any) {
+      console.error(pc.red(`❌ Error: ${error.message}`));
+      process.exit(1);
+    }
+
     if (!name) {
       const namePrompt = await text({
         message: "What is the name of your project?",
@@ -48,24 +55,18 @@ cli
       name = namePrompt;
     }
 
-    // 2. Seleccionar Template
     const templateType = await select({
       message: "Pick a project type.",
       options: [
         {
-          value: "hono",
-          label: "Edge / Serverless",
-          hint: "Uses Hono Adapter (Recommended for Edge)",
-        },
-        {
           value: "h3",
-          label: "High Performance",
-          hint: "Uses H3 Adapter (Recommended for Node/Bun)",
+          label: "High Performance (H3)",
+          hint: "Recommended for standard Servers",
         },
         {
-          value: "bare",
-          label: "Barebones",
-          hint: "Minimal setup without extra plugins",
+          value: "hono",
+          label: "Edge / Serverless (Hono)",
+          hint: "Recommended for Cloudflare/Deno/Edge",
         },
       ],
     });
@@ -75,7 +76,6 @@ cli
       process.exit(0);
     }
 
-    // 3. Preguntar por Git
     const initGit = await confirm({
       message: "Initialize a new git repository?",
       initialValue: true,
@@ -86,7 +86,6 @@ cli
       process.exit(0);
     }
 
-    // 4. Preguntar por Dependencias
     const installDeps = await confirm({
       message: "Install dependencies now? (via Bun)",
       initialValue: true,
@@ -97,48 +96,42 @@ cli
       process.exit(0);
     }
 
-    // --- INICIO DEL PROCESO ---
     const s = spinner();
     s.start("Scaffolding project...");
 
     const targetDir = join(process.cwd(), name);
 
     try {
-      // A. Descargar Template (Giget)
-      // Nota: Esto fallará si el repo no existe. Para probar, puedes usar "github:unjs/template" temporalmente
-      // o crear tus repos 'karin-template-hono', etc.
-
-      // Para pruebas reales ahora mismo sin tus repos, descomenta la línea de abajo:
-      // const templateSource = "github:unjs/template";
-
-      // Producción:
       const templateSource = `github:${TEMPLATE_OWNER}/karin-template-${templateType}`;
 
       await downloadTemplate(templateSource, {
         dir: targetDir,
-        force: true, // Sobrescribir si la carpeta existe (o manejar error antes)
+        force: true,
       });
 
       s.message("Template downloaded!");
 
-      // B. Inicializar Git
+      // B. Inicializar Git (SILENCIOSO)
       if (initGit) {
-        await Bun.spawn(["git", "init"], { cwd: targetDir }).exited;
+        await Bun.spawn(["git", "init"], {
+          cwd: targetDir,
+          stdout: "ignore", // <--- Agregado
+          stderr: "ignore", // <--- Agregado (Esto quita los mensajes molestos)
+        }).exited;
       }
 
       // C. Instalar Dependencias
       if (installDeps) {
-        s.message("Installing dependencies (this may take a moment)...");
+        s.message("Installing dependencies...");
         await Bun.spawn(["bun", "install"], {
           cwd: targetDir,
-          stdout: "ignore", // Ocultar output de bun install para mantener la UI limpia
-          stderr: "inherit",
+          stdout: "ignore",
+          stderr: "inherit", // Dejamos stderr aquí por si falla la instalación real
         }).exited;
       }
 
       s.stop("🚀 Project created successfully!");
 
-      // 5. Notas finales
       const nextSteps = [
         `cd ${name}`,
         installDeps ? null : `bun install`,
@@ -164,7 +157,6 @@ cli
     }
   });
 
-// --- Comando: INFO ---
 cli.command("info", "Display project details").action(() => {
   console.log(pc.bold(pc.cyan(`\n🦊 Karin-JS CLI v${version}\n`)));
   console.log(pc.green("  System:"));
@@ -173,6 +165,82 @@ cli.command("info", "Display project details").action(() => {
   console.log(pc.green("  Framework:"));
   console.log(`    Core: Installed (Workspace)`);
 });
+
+cli.command("doctor", "Check project health").action(() => {
+  console.log(pc.cyan("\n🚑 Karin-JS Doctor\n"));
+
+  const tsconfigPath = join(process.cwd(), "tsconfig.json");
+
+  if (!existsSync(tsconfigPath)) {
+    console.log(pc.red("❌ tsconfig.json not found!"));
+    return;
+  }
+
+  try {
+    // Bun lee JSON nativamente, pero para asegurar usamos JSON.parse
+    const tsconfig = JSON.parse(readFileSync(tsconfigPath, "utf-8"));
+    const compilerOptions = tsconfig.compilerOptions || {};
+
+    const checks = [
+      { name: "emitDecoratorMetadata", required: true },
+      { name: "experimentalDecorators", required: true },
+      { name: "strict", required: true },
+    ];
+
+    let allGood = true;
+
+    for (const check of checks) {
+      if (compilerOptions[check.name] === check.required) {
+        console.log(pc.green(`✅ ${check.name} is enabled`));
+      } else {
+        console.log(
+          pc.red(`❌ ${check.name} MUST be set to ${check.required}`)
+        );
+        allGood = false;
+      }
+    }
+
+    if (allGood) {
+      console.log(pc.green("\n✨ Everything looks healthy! Ready to code."));
+    } else {
+      console.log(
+        pc.yellow("\n⚠️  Please fix the issues above in your tsconfig.json")
+      );
+    }
+  } catch (e) {
+    console.log(pc.red("❌ Failed to parse tsconfig.json"));
+  }
+});
+
+cli
+  .command(
+    "generate <type> [name]",
+    "Generate a new element (controller, service, guard, filter, decorator, plugin, resource)"
+  )
+  .alias("g")
+  .option("-d, --dry-run", "Report actions without creating files")
+  .action(async (type, name, options) => {
+    // Validación interactiva si falta el nombre
+    if (!name) {
+      const namePrompt = await text({
+        message: "What is the name of the element?",
+        placeholder: "users",
+        validate: (value) => (!value ? "Value is required!" : undefined),
+      });
+      if (isCancel(namePrompt)) process.exit(0);
+      name = namePrompt.toString();
+    }
+
+    const generator = new GeneratorService(process.cwd(), options.dryRun);
+
+    try {
+      await generator.generate(type, name);
+      // El servicio se encarga de los logs específicos
+    } catch (error: any) {
+      console.error(pc.red(`❌ Error: ${error.message}`));
+      process.exit(1);
+    }
+  });
 
 cli.help();
 cli.version(version);

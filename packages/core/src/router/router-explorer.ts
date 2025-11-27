@@ -1,4 +1,5 @@
 import "reflect-metadata";
+import pc from "picocolors";
 import { container } from "tsyringe";
 import {
   CONTROLLER_METADATA,
@@ -126,9 +127,18 @@ export class RouterExplorer {
 
     const adapterMethod = (this.adapter as any)[httpMethod.toLowerCase()];
 
+    const methodColor = this.getMethodColor(httpMethod);
+    const coloredMethod = methodColor(httpMethod.padEnd(6)); // Alineado a 6 caracteres
+
+    const routeInfo = `${coloredMethod} ${fullPath}`;
+    const controllerInfo = pc.dim(`-> ${controllerClass.name}`); // Nombre del controlador en gris
+
+    this.logger.log(`${routeInfo} ${controllerInfo}`);
+
     if (adapterMethod) {
       adapterMethod.call(this.adapter, fullPath, async (ctx: any) => {
         try {
+          // 1. CREAMOS EL CONTEXTO (Esto ya lo tenías)
           const executionContext = new KarinExecutionContext(
             this.adapter,
             ctx,
@@ -154,12 +164,12 @@ export class RouterExplorer {
             }
           }
 
-          // 2. Pipes & Args
           const args = await this.paramsResolver.resolve(
             ctx,
             paramsMeta,
             [...app.getGlobalPipes(), ...classPipes, ...methodPipes],
-            this.adapter
+            this.adapter,
+            executionContext
           );
 
           // 3. Interceptors & Handler execution
@@ -178,8 +188,6 @@ export class RouterExplorer {
           return this.handleException(error, ctx, app, controllerClass, method);
         }
       });
-
-      this.logger.log(`Mapped {${fullPath}, ${httpMethod}} route`);
     }
   }
 
@@ -261,5 +269,22 @@ export class RouterExplorer {
       };
     }
     return next;
+  }
+
+  private getMethodColor(method: string) {
+    switch (method) {
+      case "GET":
+        return pc.green;
+      case "POST":
+        return pc.yellow;
+      case "PUT":
+        return pc.blue;
+      case "DELETE":
+        return pc.red;
+      case "PATCH":
+        return pc.magenta;
+      default:
+        return pc.white;
+    }
   }
 }

@@ -4,17 +4,21 @@ import type {
   IHttpAdapter,
   PipeTransform,
   ArgumentMetadata,
+  ExecutionContext, // Importamos la interfaz
 } from "../interfaces";
 import type { RouteParamMetadata } from "../decorators/params";
 
 export class ParamsResolver {
   async resolve(
-    ctx: any, // Contexto nativo (H3Event | Context)
+    ctx: any,
     params: RouteParamMetadata[],
     combinedPipes: PipeTransform[],
-    adapter: IHttpAdapter
+    adapter: IHttpAdapter,
+    executionContext: ExecutionContext // 👈 NUEVO ARGUMENTO: Recibimos el contexto ya creado
   ): Promise<unknown[]> {
     const args: unknown[] = [];
+
+    // Ordenamos por índice para insertar en la posición correcta del array de argumentos
     params.sort((a, b) => a.index - b.index);
 
     for (const param of params) {
@@ -44,13 +48,25 @@ export class ParamsResolver {
         case "RES":
           value = adapter.getResponse(ctx);
           break;
+
+        // 👇 LA MAGIA DE LOS CUSTOM DECORATORS
+        case "CUSTOM":
+          if (param.factory) {
+            // Ejecutamos la función del usuario pasándole la data y el contexto completo
+            value = param.factory(param.data, executionContext);
+          }
+          metaType = "custom";
+          break;
       }
 
-      if (param.data && isObject(value)) {
+      // Extracción de propiedades específicas (ej: @Body('email'))
+      // Nota: Para CUSTOM, usualmente la factory ya devuelve lo que quiere,
+      // pero permitimos esto por consistencia si param.data es string.
+      if (param.type !== "CUSTOM" && param.data && isObject(value)) {
         value = value[param.data];
       }
 
-      // Ejecución de Pipes
+      // Ejecución de Pipes (Validación/Transformación)
       const paramPipes = (param.pipes || []).map((p) =>
         isConstructor(p) ? container.resolve(p) : p
       );
@@ -64,7 +80,7 @@ export class ParamsResolver {
         if ((pipeInstance as PipeTransform).transform) {
           value = await (pipeInstance as PipeTransform).transform(value, {
             type: metaType,
-            data: param.data,
+            data: typeof param.data === "string" ? param.data : undefined,
           });
         }
       }

@@ -20,31 +20,27 @@ export class Logger {
     Logger.level = level;
   }
 
-  // Método genérico
   log(message: string) {
-    this.print(LogLevel.INFO, message, pc.green, "LOG  ");
+    this.print(LogLevel.INFO, message, pc.green, "LOG ");
   }
 
-  // 👇 ESTE ERA EL MÉTODO QUE FALTABA
   info(message: string) {
-    if (Logger.level <= LogLevel.INFO) {
-      this.print(LogLevel.INFO, message, pc.blue, "INFO ");
-    }
+    this.print(LogLevel.INFO, message, pc.blue, "INFO");
   }
 
   error(message: string, trace?: string) {
-    this.print(LogLevel.ERROR, message, pc.red, "ERROR");
+    this.print(LogLevel.ERROR, message, pc.red, "ERR ");
     if (trace && Logger.level <= LogLevel.ERROR) {
-      console.error(pc.dim(trace));
+      console.error(pc.red(trace));
     }
   }
 
   warn(message: string) {
-    this.print(LogLevel.WARN, message, pc.yellow, "WARN ");
+    this.print(LogLevel.WARN, message, pc.yellow, "WARN");
   }
 
   debug(message: string) {
-    this.print(LogLevel.DEBUG, message, pc.magenta, "DEBUG");
+    this.print(LogLevel.DEBUG, message, pc.magenta, "DBUG");
   }
 
   private print(
@@ -55,17 +51,25 @@ export class Logger {
   ) {
     if (Logger.level > level) return;
 
-    // Diseño: 🦊 Karin  HH:MM:SS  LEVEL  [Context]  Mensaje
+    // --- DISEÑO PREMIUM ---
 
-    const prefix = pc.bold(pc.cyan("[🦊 Karin]"));
-    const time = new Date().toLocaleTimeString();
-    const grayTime = pc.dim(time);
+    // 1. Icono del Framework (Minimalista)
+    const icon = "🦊";
 
-    const coloredLevel = pc.bold(colorFn(levelLabel));
-    const context = pc.yellow(this.context.padEnd(15));
+    // 2. Timestamp (Gris tenue para no distraer)
+    const time = new Date().toLocaleTimeString("en-US", { hour12: false });
+    const timestamp = pc.dim(time);
 
-    console.log(
-      `${prefix}  ${grayTime}  ${coloredLevel}  ${context} [${message}]`
-    );
+    // 3. Nivel (Coloreado y Bold)
+    const lvl = pc.bold(colorFn(levelLabel));
+
+    // 4. Contexto (Amarillo brillante, entre corchetes para destacar el origen)
+    const ctx = pc.yellow(`[${this.context}]`);
+
+    // 5. Mensaje (Blanco/Default)
+    const msg = message;
+
+    // Formato final: 🦊 19:35:02 INFO [RouterExplorer] Mensaje...
+    console.log(`${icon} ${timestamp} ${lvl} ${ctx} ${msg}`);
   }
 }
