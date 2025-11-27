@@ -11,8 +11,9 @@ import {
 } from "@karin-js/core";
 import { AuthGuard } from "../guards/auth.guard";
 import { CreateUserSchema, type CreateUserDto } from "./dtos/create-user.dto";
+import { User } from "./decorators/user.decorator";
 
-@Controller("/users")
+@Controller("/features")
 @UseGuards(AuthGuard) // 1. Prueba de Guard a nivel de clase
 export class FeaturesController {
   @Get("/hello/:name")
@@ -29,6 +30,11 @@ export class FeaturesController {
         browser: agent,
       },
     };
+  }
+
+  @Get("/custom")
+  testCustom(@User() user: string) {
+    return { user };
   }
 
   @Post("/users")
