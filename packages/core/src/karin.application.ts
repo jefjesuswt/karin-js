@@ -20,7 +20,13 @@ export class KarinApplication {
   private activeRequests = new Set<Promise<any>>();
   private shutdownHooksRegistered = false;
 
-  constructor(private readonly adapter: IHttpAdapter) {}
+  constructor(private readonly adapter: IHttpAdapter, private root: string) {
+    this.root = root ?? process.cwd();
+  }
+
+  getRootPath() {
+    return this.root!;
+  }
 
   public useGlobalPipes(...pipes: PipeTransform[]) {
     this.globalPipes.push(...pipes);

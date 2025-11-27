@@ -40,7 +40,8 @@ export class KarinFactory {
       throw new TypeError('Option "controllers" must be an array');
     }
 
-    const app = new KarinApplication(adapter);
+    const root = options.cwd ?? KarinFactory.findProjectRoot();
+    const app = new KarinApplication(adapter, root);
     const explorer = new RouterExplorer(adapter);
 
     // 2. Carga Manual de Controladores (Prioridad Alta)
@@ -65,14 +66,13 @@ export class KarinFactory {
           ? options.scan
           : "./src/**/*.controller.ts";
 
-      const cwd = options.cwd || this.findProjectRoot();
       const glob = new Glob(scanPath);
 
-      this.logger.info(`Project Root: ${cwd}`);
+      this.logger.info(`Project Root: ${root}`);
       this.logger.info(`Scanning controllers in: ${scanPath}`);
 
-      for await (const file of glob.scan(cwd)) {
-        const absolutePath = join(cwd, file);
+      for await (const file of glob.scan(root)) {
+        const absolutePath = join(root, file);
 
         // 4. ERROR HANDLING ROBUSTO
         try {
@@ -112,28 +112,18 @@ export class KarinFactory {
     return app;
   }
 
-  // ... (findProjectRoot se mantiene igual, ya está optimizado)
   private static findProjectRoot(): string {
-    const entryFile = Bun.main;
-    let currentDir = dirname(entryFile);
+    let dir = import.meta.dir;
 
-    // Heurística de "Carpeta src"
-    if (currentDir.endsWith(`${sep}src`)) {
-      return dirname(currentDir);
-    }
-
-    // Búsqueda de package.json
-    let searchDir = currentDir;
-    while (searchDir !== "/" && searchDir !== ".") {
-      if (existsSync(join(searchDir, "package.json"))) {
-        return searchDir;
+    while (dir !== "/" && dir !== ".") {
+      if (existsSync(join(dir, "package.json"))) {
+        return dir;
       }
-      const parent = dirname(searchDir);
-      if (parent === searchDir) break;
-      searchDir = parent;
+      const parent = dirname(dir);
+      if (parent === dir) break;
+      dir = parent;
     }
 
-    // Fallback
-    return dirname(entryFile);
+    throw new Error("Project root not found");
   }
 }

@@ -5,15 +5,13 @@ import {
   container,
 } from "@karin-js/core";
 import { config } from "dotenv";
-import { ZodSchema } from "zod";
+import { ZodError, ZodSchema } from "zod";
 import { ConfigService } from "./config.service";
+import { join } from "path";
 
-export interface ConfigPluginOptions {
-  /** Ruta al archivo .env (opcional, default: .env) */
+export interface ConfigPluginOptions<T = any> {
   envFilePath?: string;
-  /** Esquema de Zod para validar las variables */
-  schema?: ZodSchema;
-  /** Permitir variables extra no definidas en el esquema (default: true) */
+  schema?: ZodSchema<T>;
   passthrough?: boolean;
 }
 
@@ -24,8 +22,11 @@ export class ConfigPlugin implements KarinPlugin {
   constructor(private readonly options: ConfigPluginOptions = {}) {}
 
   install(app: KarinApplication) {
-    // 1. Cargar variables de entorno
-    const result = config({ path: this.options.envFilePath });
+    const envPath = this.options.envFilePath
+      ? this.options.envFilePath
+      : join(process.cwd(), ".env");
+
+    const result = config({ path: envPath });
 
     if (result.error) {
       this.logger.warn(
@@ -45,11 +46,12 @@ export class ConfigPlugin implements KarinPlugin {
       const validation = this.options.schema.safeParse(configData);
 
       if (!validation.success) {
-        this.logger.error("❌ Config validation failed:");
-        validation.error.errors.forEach((err) => {
-          this.logger.error(`   - ${err.path.join(".")}: ${err.message}`);
+        const zerr = validation.error as ZodError<any>;
+
+        zerr.issues.forEach((err) => {
+          this.logger.error(` - ${err.path.join(".")}: ${err.message}`);
         });
-        // Detener arranque si la config es inválida (Fail Fast)
+
         throw new Error("Config validation failed");
       }
 
