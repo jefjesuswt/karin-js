@@ -4,7 +4,7 @@ import type {
   IHttpAdapter,
   PipeTransform,
   ArgumentMetadata,
-  ExecutionContext, // Importamos la interfaz
+  ExecutionContext,
 } from "../interfaces";
 import type { RouteParamMetadata } from "../decorators/params";
 
@@ -12,13 +12,13 @@ export class ParamsResolver {
   async resolve(
     ctx: any,
     params: RouteParamMetadata[],
-    combinedPipes: PipeTransform[],
+    // 👇 CAMBIO: Ahora esperamos Pipes ya instanciados (rendimiento)
+    // Aunque mantenemos compatibilidad por si acaso
+    pipes: PipeTransform[],
     adapter: IHttpAdapter,
-    executionContext: ExecutionContext // 👈 NUEVO ARGUMENTO: Recibimos el contexto ya creado
+    executionContext: ExecutionContext
   ): Promise<unknown[]> {
     const args: unknown[] = [];
-
-    // Ordenamos por índice para insertar en la posición correcta del array de argumentos
     params.sort((a, b) => a.index - b.index);
 
     for (const param of params) {
@@ -48,31 +48,30 @@ export class ParamsResolver {
         case "RES":
           value = adapter.getResponse(ctx);
           break;
-
-        // 👇 LA MAGIA DE LOS CUSTOM DECORATORS
         case "CUSTOM":
           if (param.factory) {
-            // Ejecutamos la función del usuario pasándole la data y el contexto completo
             value = param.factory(param.data, executionContext);
           }
           metaType = "custom";
           break;
       }
 
-      // Extracción de propiedades específicas (ej: @Body('email'))
-      // Nota: Para CUSTOM, usualmente la factory ya devuelve lo que quiere,
-      // pero permitimos esto por consistencia si param.data es string.
       if (param.type !== "CUSTOM" && param.data && isObject(value)) {
         value = value[param.data];
       }
 
-      // Ejecución de Pipes (Validación/Transformación)
-      const paramPipes = (param.pipes || []).map((p) =>
+      // 👇 OPTIMIZACIÓN: Pipes locales del parámetro
+      // Aquí seguimos resolviendo bajo demanda porque están en metadata profunda,
+      // pero podríamos optimizarlo en el futuro pre-procesando metadata.
+      // Por ahora, optimizamos los pipes globales/clase/método que vienen en 'pipes'.
+      const paramPipesInstances = (param.pipes || []).map((p) =>
         isConstructor(p) ? container.resolve(p) : p
       );
-      const pipesToRun = [...combinedPipes, ...paramPipes];
+
+      const pipesToRun = [...pipes, ...paramPipesInstances];
 
       for (const pipe of pipesToRun) {
+        // Asumimos que 'pipe' ya es instancia si viene del array principal
         const pipeInstance = isConstructor(pipe)
           ? container.resolve(pipe)
           : pipe;

@@ -12,7 +12,6 @@ interface PackageJson {
 export async function updateKarinDependencies(projectPath: string) {
   const pkgPath = join(projectPath, "package.json");
 
-  // Casteamos el resultado de JSON.parse
   const pkg = JSON.parse(readFileSync(pkgPath, "utf-8")) as PackageJson;
 
   let updatedCount = 0;

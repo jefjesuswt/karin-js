@@ -14,6 +14,11 @@ export class KarinApplication {
   private plugins: KarinPlugin[] = [];
   private globalFilters: ExceptionFilter[] = [];
 
+  // 👇 Estado para Graceful Shutdown
+  private server?: any; // Referencia al servidor nativo (Bun server)
+  private isShuttingDown = false;
+  private activeRequests = new Set<Promise<any>>();
+
   constructor(private readonly adapter: IHttpAdapter) {}
 
   public useGlobalPipes(...pipes: PipeTransform[]) {
@@ -42,8 +47,14 @@ export class KarinApplication {
 
   public use(plugin: KarinPlugin) {
     this.plugins.push(plugin);
-    plugin.install(this);
+    if (plugin.install) {
+      plugin.install(this);
+    }
     this.logger.log(`Plugin registered: ${plugin.name}`);
+  }
+
+  public getHttpAdapter(): IHttpAdapter {
+    return this.adapter;
   }
 
   public async init() {
@@ -52,17 +63,12 @@ export class KarinApplication {
     }
 
     for (const plugin of this.plugins) {
-      if (plugin.onModuleInit) {
-        await plugin.onModuleInit();
+      if (plugin.onPluginInit) {
+        await plugin.onPluginInit();
         this.logger.log(`${plugin.name} initialized`);
       }
     }
   }
-
-  public listen(port: number): void;
-  public listen(port: number, callback: () => void): void;
-  public listen(port: number, host: string): void;
-  public listen(port: number, host: string, callback: () => void): void;
 
   public listen(port: number, ...args: any[]): void {
     let host: string | undefined = undefined;
@@ -78,15 +84,19 @@ export class KarinApplication {
 
     this.init()
       .then(() => {
-        this.adapter.listen(port, host);
+        // 👇 Guardamos la referencia del servidor
+        // Asegúrate de que tus adaptadores (H3/Hono) retornen el resultado de Bun.serve()
+        this.server = this.adapter.listen(port, host);
+
+        // 👇 Activamos los hooks de apagado
+        this.registerShutdownHooks();
 
         if (callback) {
           callback();
         } else {
           const displayHost = host ?? "localhost";
-          const protocol = "http";
           this.logger.log(
-            `Application is running on ${protocol}://${displayHost}:${port}`
+            `Application is running on http://${displayHost}:${port}`
           );
         }
       })
@@ -101,5 +111,92 @@ export class KarinApplication {
   }
   public getGlobalGuards() {
     return this.globalGuards;
+  }
+
+  // --- GRACEFUL SHUTDOWN LOGIC ---
+
+  /**
+   * Método usado internamente por el Router para rastrear peticiones en vuelo.
+   */
+  public trackRequest<T>(promise: Promise<T>): Promise<T> {
+    this.activeRequests.add(promise);
+    return promise.finally(() => {
+      this.activeRequests.delete(promise);
+    });
+  }
+
+  private registerShutdownHooks() {
+    const signals: NodeJS.Signals[] = ["SIGTERM", "SIGINT"];
+
+    signals.forEach((signal) => {
+      process.on(signal, () => {
+        this.logger.warn(`Received ${signal}, starting graceful shutdown...`);
+        this.shutdown(signal);
+      });
+    });
+
+    // Capturar errores no manejados para cerrar limpiamente también
+    process.on("uncaughtException", (error) => {
+      this.logger.error("Uncaught Exception", error.stack);
+      this.shutdown("uncaughtException");
+    });
+
+    process.on("unhandledRejection", (reason) => {
+      this.logger.error("Unhandled Rejection", String(reason));
+      this.shutdown("unhandledRejection");
+    });
+  }
+
+  private async shutdown(signal: string) {
+    if (this.isShuttingDown) return;
+    this.isShuttingDown = true;
+
+    this.logger.log(`Shutting down due to: ${signal}`);
+
+    // 1. Dejar de aceptar nuevas conexiones
+    if (this.server && typeof this.server.stop === "function") {
+      this.server.stop(); // Bun server stop (cierra el socket pero mantiene activas las reqs)
+      this.logger.log("HTTP Server stopped accepting connections");
+    }
+
+    // 2. Esperar a que las peticiones activas terminen (Drenaje)
+    if (this.activeRequests.size > 0) {
+      this.logger.log(
+        `Waiting for ${this.activeRequests.size} active requests to complete...`
+      );
+
+      const timeoutMs = 10000; // 10 segundos máximo de espera
+      const timeout = new Promise((resolve) => setTimeout(resolve, timeoutMs));
+
+      const allRequests = Promise.all(Array.from(this.activeRequests));
+
+      // Carrera: o terminan todas o se acaba el tiempo
+      await Promise.race([allRequests, timeout]);
+
+      if (this.activeRequests.size > 0) {
+        this.logger.warn(
+          `Force closing ${this.activeRequests.size} requests after ${timeoutMs}ms timeout`
+        );
+      }
+    }
+
+    // 3. Destruir Plugins (Cerrar DB, Redis, etc.)
+    this.logger.log("Cleaning up plugins...");
+    for (const plugin of this.plugins) {
+      if (plugin.onPluginDestroy) {
+        try {
+          await plugin.onPluginDestroy();
+          this.logger.log(`${plugin.name} destroyed`);
+        } catch (error: any) {
+          this.logger.error(
+            `Failed to destroy plugin ${plugin.name}`,
+            error instanceof Error ? error.stack : undefined
+          );
+        }
+      }
+    }
+
+    this.logger.log("Shutdown complete. Goodbye! 👋");
+    process.exit(0);
   }
 }

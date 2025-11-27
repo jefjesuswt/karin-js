@@ -1,16 +1,16 @@
 import { KarinApplication } from "../karin.application";
 
-export interface OnModuleInit {
-  onModuleInit(): Promise<void> | void;
+export interface OnPluginInit {
+  onPluginInit(): Promise<void> | void;
 }
 
-export interface OnModuleDestroy {
-  onModuleDestroy(): Promise<void> | void;
+export interface OnPluginDestroy {
+  onPluginDestroy(): Promise<void> | void;
 }
 
 export interface KarinPlugin
-  extends Partial<OnModuleInit>,
-    Partial<OnModuleDestroy> {
+  extends Partial<OnPluginInit>,
+    Partial<OnPluginDestroy> {
   name: string;
   install(app: KarinApplication): Promise<void> | void;
 }

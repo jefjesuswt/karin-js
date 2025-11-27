@@ -1,5 +1,4 @@
 import "reflect-metadata";
-import pc from "picocolors";
 import { container } from "tsyringe";
 import {
   CONTROLLER_METADATA,
@@ -32,6 +31,8 @@ import {
   isInterceptor,
   isObject,
 } from "../utils/type-guards";
+import { ForbiddenException } from "../exceptions/http.exception";
+import pc from "picocolors";
 
 export class RouterExplorer {
   private logger = new Logger("RouterExplorer");
@@ -46,14 +47,14 @@ export class RouterExplorer {
     }
     const controllerInstance = container.resolve(ControllerClass);
 
-    if (!isObject(controllerInstance)) {
-      return;
-    }
+    if (!isObject(controllerInstance)) return;
 
     const prefix = Reflect.getMetadata(
       CONTROLLER_METADATA,
       ControllerClass
     ) as string;
+
+    // 👇 OPTIMIZACIÓN: Pre-resuelve los metadatos de clase UNA VEZ
     const classGuards = (Reflect.getMetadata(
       GUARDS_METADATA,
       ControllerClass
@@ -64,6 +65,10 @@ export class RouterExplorer {
       INTERCEPTORS_METADATA,
       ControllerClass
     ) || []) as KarinInterceptor[];
+    const classFilters = (Reflect.getMetadata(
+      FILTER_METADATA,
+      ControllerClass
+    ) || []) as ExceptionFilter[];
 
     const proto = Object.getPrototypeOf(controllerInstance);
     const methodNames = Object.getOwnPropertyNames(proto).filter(
@@ -74,9 +79,7 @@ export class RouterExplorer {
       const method = controllerInstance[methodName];
       if (typeof method !== "function") continue;
 
-      const hasMeta = Reflect.hasMetadata(METHOD_METADATA, method);
-
-      if (hasMeta) {
+      if (Reflect.hasMetadata(METHOD_METADATA, method)) {
         this.registerRoute(
           app,
           controllerInstance,
@@ -86,7 +89,8 @@ export class RouterExplorer {
           prefix,
           classGuards,
           classPipes,
-          classInterceptors
+          classInterceptors,
+          classFilters // Pasamos filtros de clase también
         );
       }
     }
@@ -101,7 +105,8 @@ export class RouterExplorer {
     prefix: string,
     classGuards: CanActivate[],
     classPipes: PipeTransform[],
-    classInterceptors: KarinInterceptor[]
+    classInterceptors: KarinInterceptor[],
+    classFilters: ExceptionFilter[]
   ) {
     const httpMethod = Reflect.getMetadata(METHOD_METADATA, method) as string;
     const routePath = Reflect.getMetadata(PATH_METADATA, method) as string;
@@ -110,6 +115,7 @@ export class RouterExplorer {
     if (fullPath.length > 1 && fullPath.endsWith("/"))
       fullPath = fullPath.slice(0, -1);
 
+    // Obtener metadatos del método
     const methodGuards = (Reflect.getMetadata(GUARDS_METADATA, method) ||
       []) as CanActivate[];
     const methodPipes = (Reflect.getMetadata(PIPES_METADATA, method) ||
@@ -118,111 +124,134 @@ export class RouterExplorer {
       INTERCEPTORS_METADATA,
       method
     ) || []) as KarinInterceptor[];
-
-    const allInterceptors = [...classInterceptors, ...methodInterceptors];
+    const methodFilters = (Reflect.getMetadata(FILTER_METADATA, method) ||
+      []) as ExceptionFilter[];
 
     const paramsMeta: RouteParamMetadata[] =
       Reflect.getMetadata(PARAMS_METADATA, controllerInstance, methodName) ||
       [];
 
+    // 👇 OPTIMIZACIÓN CRÍTICA: Pre-resolver instancias (Singletons)
+    // Esto ocurre en el arranque, NO en cada petición.
+    const resolvedGuards = [
+      ...app.getGlobalGuards(),
+      ...classGuards,
+      ...methodGuards,
+    ].map((g) => (isConstructor(g) ? container.resolve(g) : g));
+
+    const resolvedPipes = [
+      ...app.getGlobalPipes(),
+      ...classPipes,
+      ...methodPipes,
+    ].map((p) => (isConstructor(p) ? container.resolve(p) : p));
+
+    const resolvedInterceptors = [
+      ...classInterceptors,
+      ...methodInterceptors, // Globales faltan aquí si existieran
+    ]
+      .map((i) => (isConstructor(i) ? container.resolve(i) : i))
+      .filter((i) => isInterceptor(i)) as KarinInterceptor[]; // Validación temprana
+
+    const resolvedFilters = [
+      ...methodFilters,
+      ...classFilters,
+      ...app.getGlobalFilters(),
+    ]
+      .map((f) => (isConstructor(f) ? container.resolve(f) : f))
+      .filter((f) => isExceptionFilter(f)); // Validación temprana
+
+    // Ordenamos filtros una vez al inicio
+    resolvedFilters.sort((a, b) => {
+      const metaA =
+        Reflect.getMetadata(
+          FILTER_CATCH_EXCEPTIONS,
+          Object.getPrototypeOf(a).constructor
+        ) || [];
+      const metaB =
+        Reflect.getMetadata(
+          FILTER_CATCH_EXCEPTIONS,
+          Object.getPrototypeOf(b).constructor
+        ) || [];
+      const isCatchAllA = metaA.length === 0;
+      const isCatchAllB = metaB.length === 0;
+      if (isCatchAllA && !isCatchAllB) return 1;
+      if (!isCatchAllA && isCatchAllB) return -1;
+      return 0;
+    });
+
     const adapterMethod = (this.adapter as any)[httpMethod.toLowerCase()];
 
-    const methodColor = this.getMethodColor(httpMethod);
-    const coloredMethod = pc.bold(methodColor(httpMethod.padEnd(7))); // 7 espacios para alinear (DELETE es largo)
-
-    // 2. Ruta: Blanca billante
-    const routeInfo = pc.yellow(fullPath);
-
-    // 3. Separador: "::" en gris, se ve técnico y limpio
-    const separator = pc.dim("::");
-
-    // 4. Controlador: Cyan (Azul neón), destaca mucho más que el gris
-    const controllerInfo = pc.cyan(controllerClass.name);
-
-    // Resultado: GET     /users :: UsersController
-    this.logger.log(
-      `${coloredMethod} ${controllerInfo} ${separator} ${routeInfo}`
-    );
-
     if (adapterMethod) {
-      adapterMethod.call(this.adapter, fullPath, async (ctx: any) => {
-        try {
-          // 1. CREAMOS EL CONTEXTO (Esto ya lo tenías)
-          const executionContext = new KarinExecutionContext(
-            this.adapter,
-            ctx,
-            controllerClass,
-            method
-          );
+      // Handler de la Petición (Hot Path) 🔥
+      adapterMethod.call(this.adapter, fullPath, (ctx: any) => {
+        const requestPromise = (async () => {
+          try {
+            const executionContext = new KarinExecutionContext(
+              this.adapter,
+              ctx,
+              controllerClass,
+              method
+            );
 
-          // 1. Guards
-          const allGuards = [
-            ...app.getGlobalGuards(),
-            ...classGuards,
-            ...methodGuards,
-          ];
-          for (const guard of allGuards) {
-            const instance = isConstructor(guard)
-              ? container.resolve(guard)
-              : guard;
-            const canActivate = await (instance as CanActivate).canActivate(
+            // 1. Guards (Loop optimizado con instancias ya resueltas)
+            for (const guard of resolvedGuards) {
+              const canActivate = await (guard as CanActivate).canActivate(
+                executionContext
+              );
+              if (!canActivate) {
+                throw new ForbiddenException("Forbidden resource");
+              }
+            }
+
+            // 2. Pipes & Args (Pasamos pipes ya resueltos)
+            const args = await this.paramsResolver.resolve(
+              ctx,
+              paramsMeta,
+              resolvedPipes as PipeTransform[], // <-- Pipes listos
+              this.adapter,
               executionContext
             );
-            if (!canActivate) {
-              throw new Error("Forbidden resource");
-            }
+
+            // 3. Interceptors (Usamos instancias listas)
+            const baseHandler: CallHandler = {
+              handle: async () => method.apply(controllerInstance, args),
+            };
+
+            const executionChain = await this.composeInterceptors(
+              resolvedInterceptors, // <-- Interceptores listos
+              baseHandler,
+              executionContext
+            );
+
+            return await executionChain.handle();
+          } catch (error: any) {
+            // Pasamos los filtros ya resueltos para no buscarlos de nuevo
+            return this.handleException(error, ctx, resolvedFilters, method);
           }
-
-          const args = await this.paramsResolver.resolve(
-            ctx,
-            paramsMeta,
-            [...app.getGlobalPipes(), ...classPipes, ...methodPipes],
-            this.adapter,
-            executionContext
-          );
-
-          // 3. Interceptors & Handler execution
-          const baseHandler: CallHandler = {
-            handle: async () => method.apply(controllerInstance, args),
-          };
-
-          const executionChain = await this.composeInterceptors(
-            allInterceptors,
-            baseHandler,
-            executionContext
-          );
-
-          return await executionChain.handle();
-        } catch (error: any) {
-          return this.handleException(error, ctx, app, controllerClass, method);
-        }
+        })();
+        return app.trackRequest(requestPromise);
       });
+
+      // Logging (Código visual anterior...)
+      const methodColor = this.getMethodColor(httpMethod);
+      const coloredMethod = pc.bold(methodColor(httpMethod.padEnd(7)));
+      const routeInfo = fullPath.padEnd(40);
+      const separator = pc.dim("::");
+      const controllerInfo = pc.cyan(controllerClass.name);
+      this.logger.log(
+        `${coloredMethod} ${routeInfo} ${separator} ${controllerInfo}`
+      );
     }
   }
 
+  // 👇 Método simplificado, ya recibe los filtros listos
   private async handleException(
     exception: any,
     ctx: any,
-    app: KarinApplication,
-    ControllerClass: any,
+    resolvedFilters: any[],
     method: Function
   ) {
-    const methodFilters = (Reflect.getMetadata(FILTER_METADATA, method) ||
-      []) as (ExceptionFilter | Function)[];
-    const classFilters = (Reflect.getMetadata(
-      FILTER_METADATA,
-      ControllerClass
-    ) || []) as (ExceptionFilter | Function)[];
-    const globalFilters = app.getGlobalFilters();
-    const allFilters = [...methodFilters, ...classFilters, ...globalFilters];
-
-    for (const filterOrClass of allFilters) {
-      const filterInstance = isConstructor(filterOrClass)
-        ? container.resolve(filterOrClass as any)
-        : filterOrClass;
-
-      if (!isExceptionFilter(filterInstance)) continue;
-
+    for (const filterInstance of resolvedFilters) {
       const constructor = Object.getPrototypeOf(filterInstance).constructor;
       const catchMetatypes =
         Reflect.getMetadata(FILTER_CATCH_EXCEPTIONS, constructor) || [];
@@ -235,7 +264,7 @@ export class RouterExplorer {
         const host = new KarinExecutionContext(
           this.adapter,
           ctx,
-          ControllerClass,
+          null as any, // No necesitamos la clase aquí para el filtro base
           method
         ).switchToHttp();
 
@@ -246,7 +275,7 @@ export class RouterExplorer {
     const host = new KarinExecutionContext(
       this.adapter,
       ctx,
-      ControllerClass,
+      null as any,
       method
     ).switchToHttp();
 
@@ -254,22 +283,17 @@ export class RouterExplorer {
   }
 
   private async composeInterceptors(
-    interceptors: any[],
+    interceptors: KarinInterceptor[],
     handler: CallHandler,
     context: KarinExecutionContext
   ): Promise<CallHandler> {
     let next = handler;
 
     for (let i = interceptors.length - 1; i >= 0; i--) {
-      const interceptorOrClass = interceptors[i];
-      const instance = isConstructor(interceptorOrClass)
-        ? container.resolve(interceptorOrClass as any)
-        : interceptorOrClass;
-
-      if (!isInterceptor(instance)) continue;
-
-      const currentInterceptor = instance;
+      const currentInterceptor = interceptors[i];
       const currentNext = next;
+
+      if (!currentInterceptor) continue;
 
       next = {
         handle: async () => {

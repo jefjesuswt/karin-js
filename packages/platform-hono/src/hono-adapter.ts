@@ -52,10 +52,10 @@ export class HonoAdapter implements IHttpAdapter<Context, Request, Context> {
   // --- Server Start ---
 
   listen(port: number, host?: string) {
-    Bun.serve({
+    return Bun.serve({
       port,
-      hostname: host, // Si es undefined, Bun usa 0.0.0.0 por defecto
-      fetch: this.app.fetch, // Hono es 100% compatible con Bun.serve
+      hostname: host,
+      fetch: this.app.fetch,
     });
   }
 

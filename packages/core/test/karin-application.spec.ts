@@ -31,19 +31,19 @@ describe("KarinApplication", () => {
     expect(mockPlugin.install).toHaveBeenCalledWith(app);
   });
 
-  it("should execute onModuleInit lifecycle hook on initialization", async () => {
+  it("should execute onPluginInit lifecycle hook on initialization", async () => {
     const app = new KarinApplication(mockAdapter);
 
     const mockPlugin: KarinPlugin = {
       name: "DBPlugin",
       install: () => {},
-      onModuleInit: mock(async () => {}),
+      onPluginInit: mock(async () => {}),
     };
 
     app.use(mockPlugin);
     await app.init();
 
-    expect(mockPlugin.onModuleInit).toHaveBeenCalled();
+    expect(mockPlugin.onPluginInit).toHaveBeenCalled();
   });
 
   it("should delegate enableCors to the adapter", () => {

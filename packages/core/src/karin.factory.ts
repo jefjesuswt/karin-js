@@ -1,6 +1,6 @@
 import "reflect-metadata";
 import { Glob } from "bun";
-import { join, dirname, sep } from "path"; // Agregamos sep
+import { join, dirname, sep } from "path";
 import { existsSync } from "fs";
 import { CONTROLLER_METADATA } from "./decorators/constants";
 import { Logger } from "./logger";
@@ -9,50 +9,102 @@ import { KarinApplication } from "./karin.application";
 import type { IHttpAdapter } from "./interfaces";
 import { RouterExplorer } from "./router/router-explorer";
 
+export interface KarinFactoryOptions {
+  /** Ruta glob para buscar controladores (ej: "./src/*.ts"). Si se omite, se usa el default. */
+  scan?: string;
+  /** Directorio de trabajo manual. Si se omite, se autodetecta. */
+  cwd?: string;
+  /** Lista de controladores para registrar manualmente (útil para tests o monorepos estrictos). */
+  controllers?: any[];
+  /** * Si es true, el framework lanzará una excepción y detendrá el arranque si falla al cargar un archivo.
+   * Por defecto es false (solo loguea el error y continúa).
+   */
+  strict?: boolean;
+}
+
 export class KarinFactory {
   private static logger = new Logger("KarinFactory");
 
   static async create(
     adapter: IHttpAdapter,
-    options: { scan?: string; cwd?: string; controllers?: any[] } = {}
+    options: KarinFactoryOptions = {}
   ): Promise<KarinApplication> {
+    // 1. INPUT VALIDATION (Seguridad)
+    if (options.scan !== undefined && typeof options.scan !== "string") {
+      throw new TypeError('Option "scan" must be a string');
+    }
+    if (
+      options.controllers !== undefined &&
+      !Array.isArray(options.controllers)
+    ) {
+      throw new TypeError('Option "controllers" must be an array');
+    }
+
     const app = new KarinApplication(adapter);
     const explorer = new RouterExplorer(adapter);
 
-    if (options.controllers) {
+    // 2. Carga Manual de Controladores (Prioridad Alta)
+    if (options.controllers && options.controllers.length > 0) {
       this.logger.info(
         `Registering ${options.controllers.length} manual controllers`
       );
       for (const ControllerClass of options.controllers) {
-        explorer.explore(app, ControllerClass);
+        if (isConstructor(ControllerClass)) {
+          explorer.explore(app, ControllerClass);
+        }
       }
     }
 
-    if (options.scan) {
-    }
+    // 3. Escaneo Automático
+    // Escaneamos si se pidió explícitamente O si no hay controladores manuales
+    const shouldScan = options.scan || !options.controllers;
 
-    const scanPath = options.scan || "./src/**/*.controller.ts";
+    if (shouldScan) {
+      const scanPath =
+        typeof options.scan === "string"
+          ? options.scan
+          : "./src/**/*.controller.ts";
 
-    // Calculamos el root de forma inteligente
-    const cwd = options.cwd || this.findProjectRoot();
+      const cwd = options.cwd || this.findProjectRoot();
+      const glob = new Glob(scanPath);
 
-    // Creamos el Glob relativo al cwd calculado
-    const glob = new Glob(scanPath);
+      this.logger.info(`Project Root: ${cwd}`);
+      this.logger.info(`Scanning controllers in: ${scanPath}`);
 
-    this.logger.info(`Project Root: ${cwd}`);
-    this.logger.info(`Scanning controllers in: ${scanPath}`);
+      for await (const file of glob.scan(cwd)) {
+        const absolutePath = join(cwd, file);
 
-    for await (const file of glob.scan(cwd)) {
-      const absolutePath = join(cwd, file);
-      const module = await import(absolutePath);
+        // 4. ERROR HANDLING ROBUSTO
+        try {
+          // Importación dinámica protegida
+          const module = await import(absolutePath);
 
-      for (const key of Object.keys(module)) {
-        const CandidateClass = module[key];
-        if (
-          isConstructor(CandidateClass) &&
-          Reflect.hasMetadata(CONTROLLER_METADATA, CandidateClass)
-        ) {
-          explorer.explore(app, CandidateClass);
+          // Iteración segura sobre las exportaciones
+          for (const key of Object.keys(module)) {
+            const CandidateClass = module[key];
+
+            try {
+              // Verificación de metadatos protegida
+              if (
+                isConstructor(CandidateClass) &&
+                Reflect.hasMetadata(CONTROLLER_METADATA, CandidateClass)
+              ) {
+                explorer.explore(app, CandidateClass);
+              }
+            } catch (explorerError: any) {
+              this.logger.error(
+                `Failed to register controller ${key} from ${file}: ${explorerError.message}`
+              );
+              // Si estamos en modo estricto, detenemos el arranque
+              if (options.strict) throw explorerError;
+            }
+          }
+        } catch (importError: any) {
+          this.logger.error(
+            `Failed to import controller file: ${file}. Error: ${importError.message}`
+          );
+          // Error crítico de sintaxis o archivo corrupto
+          if (options.strict) throw importError;
         }
       }
     }
@@ -60,31 +112,28 @@ export class KarinFactory {
     return app;
   }
 
+  // ... (findProjectRoot se mantiene igual, ya está optimizado)
   private static findProjectRoot(): string {
     const entryFile = Bun.main;
     let currentDir = dirname(entryFile);
 
-    // 1. Heurística de "Carpeta src":
-    // Si el entry point está en 'src', el proyecto es el padre.
-    // Esto soluciona sub-proyectos sin package.json (como el playground).
+    // Heurística de "Carpeta src"
     if (currentDir.endsWith(`${sep}src`)) {
       return dirname(currentDir);
     }
 
-    // 2. Búsqueda estándar de package.json
-    const startDir = currentDir;
-    while (currentDir !== "/" && currentDir !== ".") {
-      if (existsSync(join(currentDir, "package.json"))) {
-        return currentDir;
+    // Búsqueda de package.json
+    let searchDir = currentDir;
+    while (searchDir !== "/" && searchDir !== ".") {
+      if (existsSync(join(searchDir, "package.json"))) {
+        return searchDir;
       }
-      currentDir = dirname(currentDir);
-
-      // Evitar bucles infinitos o subir demasiado en sistemas raros
-      if (currentDir === dirname(currentDir)) break;
+      const parent = dirname(searchDir);
+      if (parent === searchDir) break;
+      searchDir = parent;
     }
 
-    // 3. Fallback: Si fallamos, volvemos al directorio del entry file
-    // (Mejor que process.cwd() que depende de dónde tiraste el comando)
+    // Fallback
     return dirname(entryFile);
   }
 }

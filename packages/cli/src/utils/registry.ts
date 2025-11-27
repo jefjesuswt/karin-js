@@ -28,7 +28,6 @@ export async function getLatestVersion(packageName: string): Promise<string> {
       throw new Error(`Failed to fetch version for ${packageName}`);
     }
 
-    // 2. Casting seguro a nuestra interfaz genérica
     const data = (await response.json()) as NpmRegistryResponse;
 
     return data.version;

@@ -13,6 +13,9 @@ export interface IHttpAdapter<
 
   enableCors?(options?: any): void;
 
+  listen(port: number, host?: string): any;
+  close?(): void | Promise<void>;
+
   readBody(ctx: TContext): Promise<any>;
   getQuery(ctx: TContext): Record<string, any>;
   getParams(ctx: TContext): Record<string, any>;

@@ -72,7 +72,7 @@ export class H3Adapter implements IHttpAdapter<H3Event> {
   }
 
   getHeaders(ctx: H3Event) {
-    // Conversión segura de headers
+    if (!ctx.req || !ctx.req.headers) return {};
     return Object.fromEntries(ctx.req.headers.entries());
   }
 
@@ -91,7 +91,7 @@ export class H3Adapter implements IHttpAdapter<H3Event> {
   listen(port: number, host?: string) {
     const h3App = this.app;
 
-    Bun.serve({
+    return Bun.serve({
       port,
       hostname: host,
       async fetch(req) {
