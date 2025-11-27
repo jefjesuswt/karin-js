@@ -1,5 +1,11 @@
 # @karin-js/cli
 
+## 0.3.0
+
+### Minor Changes
+
+- "feat: Implement Graceful Shutdown and new Logger design."
+
 ## 0.2.2
 
 ### Patch Changes
