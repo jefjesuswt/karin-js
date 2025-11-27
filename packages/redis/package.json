@@ -1,0 +1,17 @@
+{
+  "name": "@karin-js/redis",
+  "version": "0.0.1",
+  "module": "index.ts",
+  "type": "module",
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "@karin-js/core": "workspace:*",
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@karin-js/core": "workspace:*",
+    "ioredis": "^5.8.2"
+  }
+}

@@ -12,5 +12,9 @@
   },
   "peerDependencies": {
     "typescript": "^5"
+  },
+  "dependencies": {
+    "@karin-js/mongoose": "workspace:*",
+    "@karin-js/redis": "workspace:*"
   }
 }

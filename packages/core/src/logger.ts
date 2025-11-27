@@ -31,7 +31,7 @@ export class Logger {
   error(message: string, trace?: string) {
     this.print(LogLevel.ERROR, message, pc.red, "ERR ");
     if (trace && Logger.level <= LogLevel.ERROR) {
-      console.error(pc.red(trace));
+      console.error(pc.dim(pc.red(trace))); // Trace también en rojo pero dim
     }
   }
 
@@ -51,23 +51,24 @@ export class Logger {
   ) {
     if (Logger.level > level) return;
 
-    // --- DISEÑO "DASHBOARD" ---
-    // 🦊 | 10:42:00 | INFO | RouterExplorer     Mensaje...
+    // Diseño: 🦊 │ HH:MM:SS │ LEVEL │ Context            Mensaje
 
-    const pid = process.pid;
-    const prefix = pc.bold(pc.cyan(`🦊`));
-    const separator = pc.dim("│"); // Tubería fina
+    const prefix = pc.bold(pc.cyan("🦊"));
+    const separator = pc.dim("│");
 
     const time = new Date().toLocaleTimeString("en-US", { hour12: false });
     const timestamp = pc.dim(time);
 
     const lvl = pc.bold(colorFn(levelLabel));
 
-    // Contexto sin corchetes, alineado y en color amarillo
-    const ctx = pc.yellow(this.context.padEnd(19));
+    // Contexto alineado (aumentado a 18 para que quepan nombres largos)
+    const ctx = pc.yellow(this.context.padEnd(18));
+
+    // 👇 CAMBIO: Coloreamos el mensaje con el color del nivel
+    const coloredMessage = colorFn(message);
 
     console.log(
-      `${prefix} ${separator} ${timestamp} ${separator} ${lvl} ${separator} ${ctx} ${message}`
+      `${prefix} ${separator} ${timestamp} ${separator} ${lvl} ${separator} ${ctx} ${coloredMessage}`
     );
   }
 }

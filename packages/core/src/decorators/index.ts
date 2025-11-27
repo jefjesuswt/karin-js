@@ -4,3 +4,4 @@ export * from "./params";
 export * from "./core";
 export * from "./constants";
 export * from "./filters";
+export * from "./service";

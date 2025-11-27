@@ -42,19 +42,21 @@ export class RouterExplorer {
   constructor(private readonly adapter: IHttpAdapter) {}
 
   public explore(app: KarinApplication, ControllerClass: any) {
+    // 1. Registramos en el contenedor pero NO instanciamos todavía
     if (!container.isRegistered(ControllerClass)) {
       container.registerSingleton(ControllerClass);
     }
-    const controllerInstance = container.resolve(ControllerClass);
 
-    if (!isObject(controllerInstance)) return;
+    // 👇 CAMBIO CLAVE: Usamos el PROTOTIPO para leer metadatos sin instanciar
+    // Esto evita el error de dependencia faltante al arrancar.
+    const proto = ControllerClass.prototype;
 
     const prefix = Reflect.getMetadata(
       CONTROLLER_METADATA,
       ControllerClass
     ) as string;
 
-    // 👇 OPTIMIZACIÓN: Pre-resuelve los metadatos de clase UNA VEZ
+    // Metadatos de clase
     const classGuards = (Reflect.getMetadata(
       GUARDS_METADATA,
       ControllerClass
@@ -70,27 +72,25 @@ export class RouterExplorer {
       ControllerClass
     ) || []) as ExceptionFilter[];
 
-    const proto = Object.getPrototypeOf(controllerInstance);
     const methodNames = Object.getOwnPropertyNames(proto).filter(
       (m) => m !== "constructor"
     );
 
     for (const methodName of methodNames) {
-      const method = controllerInstance[methodName];
+      const method = proto[methodName]; // Leemos del prototipo
       if (typeof method !== "function") continue;
 
       if (Reflect.hasMetadata(METHOD_METADATA, method)) {
         this.registerRoute(
           app,
-          controllerInstance,
-          ControllerClass,
+          ControllerClass, // Pasamos la CLASE, no la instancia
           method,
           methodName,
           prefix,
           classGuards,
           classPipes,
           classInterceptors,
-          classFilters // Pasamos filtros de clase también
+          classFilters
         );
       }
     }
@@ -98,8 +98,7 @@ export class RouterExplorer {
 
   private registerRoute(
     app: KarinApplication,
-    controllerInstance: any,
-    controllerClass: any,
+    ControllerClass: any, // Recibimos la Clase
     method: Function,
     methodName: string,
     prefix: string,
@@ -115,7 +114,7 @@ export class RouterExplorer {
     if (fullPath.length > 1 && fullPath.endsWith("/"))
       fullPath = fullPath.slice(0, -1);
 
-    // Obtener metadatos del método
+    // Metadatos del método
     const methodGuards = (Reflect.getMetadata(GUARDS_METADATA, method) ||
       []) as CanActivate[];
     const methodPipes = (Reflect.getMetadata(PIPES_METADATA, method) ||
@@ -127,12 +126,15 @@ export class RouterExplorer {
     const methodFilters = (Reflect.getMetadata(FILTER_METADATA, method) ||
       []) as ExceptionFilter[];
 
+    // Params metadata también está en el prototipo
     const paramsMeta: RouteParamMetadata[] =
-      Reflect.getMetadata(PARAMS_METADATA, controllerInstance, methodName) ||
-      [];
+      Reflect.getMetadata(
+        PARAMS_METADATA,
+        ControllerClass.prototype, // Leemos del prototipo explícitamente
+        methodName
+      ) || [];
 
-    // 👇 OPTIMIZACIÓN CRÍTICA: Pre-resolver instancias (Singletons)
-    // Esto ocurre en el arranque, NO en cada petición.
+    // Pre-resolución de instancias (Guards, Pipes, etc.)
     const resolvedGuards = [
       ...app.getGlobalGuards(),
       ...classGuards,
@@ -145,10 +147,7 @@ export class RouterExplorer {
       ...methodPipes,
     ].map((p) => (isConstructor(p) ? container.resolve(p) : p));
 
-    const resolvedInterceptors = [
-      ...classInterceptors,
-      ...methodInterceptors, // Globales faltan aquí si existieran
-    ]
+    const resolvedInterceptors = [...classInterceptors, ...methodInterceptors]
       .map((i) => (isConstructor(i) ? container.resolve(i) : i))
       .filter((i) => isInterceptor(i)) as KarinInterceptor[]; // Validación temprana
 
@@ -158,9 +157,9 @@ export class RouterExplorer {
       ...app.getGlobalFilters(),
     ]
       .map((f) => (isConstructor(f) ? container.resolve(f) : f))
-      .filter((f): f is ExceptionFilter => isExceptionFilter(f));
+      .filter((f): f is ExceptionFilter => isExceptionFilter(f)); // Validación temprana
 
-    // Ordenamos filtros una vez al inicio
+    // Ordenamos filtros
     resolvedFilters.sort((a, b) => {
       const metaA =
         Reflect.getMetadata(
@@ -182,18 +181,26 @@ export class RouterExplorer {
     const adapterMethod = (this.adapter as any)[httpMethod.toLowerCase()];
 
     if (adapterMethod) {
-      // Handler de la Petición (Hot Path) 🔥
       adapterMethod.call(this.adapter, fullPath, (ctx: any) => {
+        // Envolvemos en una promesa para trackRequest (Graceful Shutdown)
         const requestPromise = (async () => {
           try {
+            // 👇 LAZY INSTANTIATION: Resolvemos el controlador AQUÍ, dentro de la petición.
+            // En este punto, app.use() ya corrió y los modelos están registrados.
+            const controllerInstance = container.resolve(ControllerClass);
+
+            // Hacemos bind del método a la instancia
+            const handlerInstance =
+              controllerInstance[methodName].bind(controllerInstance);
+
             const executionContext = new KarinExecutionContext(
               this.adapter,
               ctx,
-              controllerClass,
-              method
+              ControllerClass,
+              handlerInstance // Usamos el handler vinculado
             );
 
-            // 1. Guards (Loop optimizado con instancias ya resueltas)
+            // 1. Guards
             for (const guard of resolvedGuards) {
               const canActivate = await (guard as CanActivate).canActivate(
                 executionContext
@@ -203,48 +210,50 @@ export class RouterExplorer {
               }
             }
 
-            // 2. Pipes & Args (Pasamos pipes ya resueltos)
+            // 2. Pipes & Args
             const args = await this.paramsResolver.resolve(
               ctx,
               paramsMeta,
-              resolvedPipes as PipeTransform[], // <-- Pipes listos
+              resolvedPipes as PipeTransform[],
               this.adapter,
               executionContext
             );
 
-            // 3. Interceptors (Usamos instancias listas)
+            // 3. Interceptors & Handler
             const baseHandler: CallHandler = {
-              handle: async () => method.apply(controllerInstance, args),
+              handle: async () => handlerInstance(...args), // Ejecutamos sobre la instancia
             };
 
             const executionChain = await this.composeInterceptors(
-              resolvedInterceptors, // <-- Interceptores listos
+              resolvedInterceptors,
               baseHandler,
               executionContext
             );
 
             return await executionChain.handle();
           } catch (error: any) {
-            // Pasamos los filtros ya resueltos para no buscarlos de nuevo
             return this.handleException(error, ctx, resolvedFilters, method);
           }
         })();
+
         return app.trackRequest(requestPromise);
       });
 
-      // Logging (Código visual anterior...)
+      // Logging
       const methodColor = this.getMethodColor(httpMethod);
       const coloredMethod = pc.bold(methodColor(httpMethod.padEnd(7)));
       const routeInfo = fullPath.padEnd(40);
       const separator = pc.dim("::");
-      const controllerInfo = pc.cyan(controllerClass.name);
+      const controllerInfo = pc.cyan(ControllerClass.name);
+
       this.logger.log(
         `${coloredMethod} ${routeInfo} ${separator} ${controllerInfo}`
       );
     }
   }
 
-  // 👇 Método simplificado, ya recibe los filtros listos
+  // ... (handleException, composeInterceptors y getMethodColor siguen igual) ...
+
   private async handleException(
     exception: any,
     ctx: any,
@@ -264,7 +273,7 @@ export class RouterExplorer {
         const host = new KarinExecutionContext(
           this.adapter,
           ctx,
-          null as any, // No necesitamos la clase aquí para el filtro base
+          null as any,
           method
         ).switchToHttp();
 
@@ -291,9 +300,9 @@ export class RouterExplorer {
 
     for (let i = interceptors.length - 1; i >= 0; i--) {
       const currentInterceptor = interceptors[i];
-      const currentNext = next;
+      if (!currentInterceptor) continue; // Safety check
 
-      if (!currentInterceptor) continue;
+      const currentNext = next;
 
       next = {
         handle: async () => {
