@@ -1,20 +1,18 @@
 import { existsSync, mkdirSync, writeFileSync } from "fs";
 import { join, dirname, basename, relative } from "path";
 import pc from "picocolors";
-import { spinner, note, outro } from "@clack/prompts";
-import { toKebabCase, removeSuffix } from "../utils/formatting";
+import { spinner, note } from "@clack/prompts";
+import { toKebabCase, removeSuffix, toPascalCase } from "../utils/formatting";
 import { findSrcDir } from "../utils/paths";
-import {
-  generateControllerTemplate,
-  generateDecoratorTemplate,
-  generateEntityTemplate,
-  generateFilterTemplate,
-  generateGuardTemplate,
-  generatePluginTemplate,
-  generateServiceTemplate,
-} from "../templates";
 
-// Templates
+// Importa tus templates aquí (asegúrate de haberlos creado como vimos antes)
+import { generateControllerTemplate } from "../templates/controller.template";
+import { generateServiceTemplate } from "../templates/service.template";
+import { generateEntityTemplate } from "../templates/entity.template";
+import { generateGuardTemplate } from "../templates/guard.template";
+import { generateFilterTemplate } from "../templates/filter.template";
+import { generatePluginTemplate } from "../templates/plugin.template";
+import { generateDecoratorTemplate } from "../templates/decorator.template";
 
 type GeneratorType =
   | "controller"
@@ -23,8 +21,8 @@ type GeneratorType =
   | "guard"
   | "filter"
   | "resource"
-  | "decorator"
-  | "plugin";
+  | "plugin"
+  | "decorator";
 
 export class GeneratorService {
   private createdFiles: string[] = [];
@@ -38,8 +36,8 @@ export class GeneratorService {
     try {
       const srcPath = findSrcDir(this.cwd);
 
-      // 1. Limpieza inteligente del nombre
-      // Si genera un controller y el usuario puso "UserController", lo dejamos en "User"
+      // 1. Limpieza inteligente: "ProductsController" -> "Products"
+      // Solo si NO es un recurso (porque el recurso usa el nombre base)
       let cleanName = rawName;
       if (type !== "resource") {
         cleanName = removeSuffix(rawName, type);
@@ -47,6 +45,7 @@ export class GeneratorService {
 
       const featureName = basename(cleanName);
       const pathPrefix = dirname(cleanName) === "." ? "" : dirname(cleanName);
+      // Estructura: src/feature-name/
       const targetDir = join(srcPath, pathPrefix, toKebabCase(featureName));
 
       switch (type) {
@@ -90,21 +89,21 @@ export class GeneratorService {
             generateFilterTemplate
           );
           break;
+        case "plugin":
+          // Plugins suelen ir en src/plugins o la raíz de feature
+          this.writeFile(
+            targetDir,
+            featureName,
+            "plugin",
+            generatePluginTemplate
+          );
+          break;
         case "decorator":
           this.writeFile(
             targetDir,
             featureName,
             "decorator",
             generateDecoratorTemplate
-          );
-          break;
-
-        case "plugin":
-          this.writeFile(
-            targetDir,
-            featureName,
-            "plugin",
-            generatePluginTemplate
           );
           break;
         case "resource":
@@ -116,7 +115,7 @@ export class GeneratorService {
 
       s.stop(`Successfully generated ${type} ${pc.cyan(featureName)}`);
 
-      // Mostrar resumen bonito
+      // Resumen bonito
       if (this.createdFiles.length > 0) {
         const fileList = this.createdFiles
           .map((f) => `${pc.green("CREATE")} ${f}`)
@@ -131,8 +130,7 @@ export class GeneratorService {
   }
 
   private async generateResource(targetDir: string, name: string) {
-    // Un resource es la suma de varias partes.
-    // Limpiamos el nombre por si el usuario puso "UserResource" -> "User"
+    // Limpiamos 'Resource' del nombre si el usuario lo puso
     const cleanName = removeSuffix(name, "resource");
 
     this.writeFile(
@@ -148,11 +146,12 @@ export class GeneratorService {
       "entity",
       generateEntityTemplate
     );
+    // DTOs opcional
     this.writeFile(
       join(targetDir, "dtos"),
       `create-${cleanName}`,
       "dto",
-      (n) => `export class Create${n}Dto {}`
+      (n) => `export class Create${toPascalCase(n)}Dto {}`
     );
   }
 
@@ -167,7 +166,6 @@ export class GeneratorService {
     const filePath = join(dir, fileName);
     const content = templateFn(name);
 
-    // Para mostrar en consola, usamos ruta relativa al CWD (más limpio)
     const relativePath = relative(this.cwd, filePath);
 
     if (this.dryRun) {

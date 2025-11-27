@@ -21,21 +21,15 @@ const cli = cac("karin");
 
 const TEMPLATE_OWNER = "jefjesuswt";
 
+// --- Comando: NEW ---
 cli
   .command("new [name]", "Create a new Karin-JS project")
-  .action(async (type, name, options) => {
+  .action(async (name) => {
+    // ✅ CORRECCIÓN: Solo recibe 'name'
     console.clear();
     intro(pc.bgCyan(pc.black(" 🦊 Karin-JS Creator ")));
 
-    const generator = new GeneratorService(process.cwd(), options.dryRun);
-
-    try {
-      await generator.generate(type, name);
-    } catch (error: any) {
-      console.error(pc.red(`❌ Error: ${error.message}`));
-      process.exit(1);
-    }
-
+    // 1. Obtener nombre
     if (!name) {
       const namePrompt = await text({
         message: "What is the name of your project?",
@@ -55,19 +49,12 @@ cli
       name = namePrompt;
     }
 
+    // 2. Seleccionar Template
     const templateType = await select({
       message: "Pick a project type.",
       options: [
-        {
-          value: "h3",
-          label: "High Performance (H3)",
-          hint: "Recommended for standard Servers",
-        },
-        {
-          value: "hono",
-          label: "Edge / Serverless (Hono)",
-          hint: "Recommended for Cloudflare/Deno/Edge",
-        },
+        { value: "h3", label: "High Performance (H3)", hint: "Recommended" },
+        { value: "hono", label: "Edge / Serverless (Hono)" },
       ],
     });
 
@@ -76,11 +63,11 @@ cli
       process.exit(0);
     }
 
+    // 3. Git & Deps
     const initGit = await confirm({
       message: "Initialize a new git repository?",
       initialValue: true,
     });
-
     if (isCancel(initGit)) {
       cancel("Operation cancelled.");
       process.exit(0);
@@ -90,12 +77,12 @@ cli
       message: "Install dependencies now? (via Bun)",
       initialValue: true,
     });
-
     if (isCancel(installDeps)) {
       cancel("Operation cancelled.");
       process.exit(0);
     }
 
+    // 4. Proceso
     const s = spinner();
     s.start("Scaffolding project...");
 
@@ -111,22 +98,20 @@ cli
 
       s.message("Template downloaded!");
 
-      // B. Inicializar Git (SILENCIOSO)
       if (initGit) {
         await Bun.spawn(["git", "init"], {
           cwd: targetDir,
-          stdout: "ignore", // <--- Agregado
-          stderr: "ignore", // <--- Agregado (Esto quita los mensajes molestos)
+          stdout: "ignore", // ✅ Silenciamos Git
+          stderr: "ignore",
         }).exited;
       }
 
-      // C. Instalar Dependencias
       if (installDeps) {
         s.message("Installing dependencies...");
         await Bun.spawn(["bun", "install"], {
           cwd: targetDir,
           stdout: "ignore",
-          stderr: "inherit", // Dejamos stderr aquí por si falla la instalación real
+          stderr: "inherit",
         }).exited;
       }
 
@@ -139,32 +124,43 @@ cli
       ].filter(Boolean);
 
       note(nextSteps.join("\n"), "Next steps:");
-
       outro(`Enjoy building with ${pc.cyan("Karin-JS")}! 🦊`);
     } catch (error: any) {
       s.stop("❌ Failed to create project");
       console.error(pc.red(error.message));
-
       if (error.message.includes("404")) {
-        console.log(
-          pc.yellow(
-            `\nTip: The template '${templateType}' might not exist yet in user '${TEMPLATE_OWNER}'.`
-          )
-        );
+        console.log(pc.yellow(`\nTip: Template '${templateType}' not found.`));
       }
-
       process.exit(1);
     }
   });
 
-cli.command("info", "Display project details").action(() => {
-  console.log(pc.bold(pc.cyan(`\n🦊 Karin-JS CLI v${version}\n`)));
-  console.log(pc.green("  System:"));
-  console.log(`    OS: ${process.platform} ${process.arch}`);
-  console.log(`    Bun: ${Bun.version}`);
-  console.log(pc.green("  Framework:"));
-  console.log(`    Core: Installed (Workspace)`);
-});
+// --- Comando: GENERATE ---
+cli
+  .command("generate <type> [name]", "Generate a new element")
+  .alias("g")
+  .option("-d, --dry-run", "Report actions without creating files")
+  .action(async (type, name, options) => {
+    // ✅ CORRECCIÓN: Argumentos correctos (type, name, options)
+    if (!name) {
+      const namePrompt = await text({
+        message: "What is the name of the element?",
+        placeholder: "users",
+        validate: (value) => (!value ? "Value is required!" : undefined),
+      });
+      if (isCancel(namePrompt)) process.exit(0);
+      name = namePrompt.toString();
+    }
+
+    const generator = new GeneratorService(process.cwd(), options.dryRun);
+
+    try {
+      await generator.generate(type, name);
+    } catch (error: any) {
+      console.error(pc.red(`❌ Error: ${error.message}`));
+      process.exit(1);
+    }
+  });
 
 cli.command("doctor", "Check project health").action(() => {
   console.log(pc.cyan("\n🚑 Karin-JS Doctor\n"));
@@ -212,35 +208,15 @@ cli.command("doctor", "Check project health").action(() => {
   }
 });
 
-cli
-  .command(
-    "generate <type> [name]",
-    "Generate a new element (controller, service, guard, filter, decorator, plugin, resource)"
-  )
-  .alias("g")
-  .option("-d, --dry-run", "Report actions without creating files")
-  .action(async (type, name, options) => {
-    // Validación interactiva si falta el nombre
-    if (!name) {
-      const namePrompt = await text({
-        message: "What is the name of the element?",
-        placeholder: "users",
-        validate: (value) => (!value ? "Value is required!" : undefined),
-      });
-      if (isCancel(namePrompt)) process.exit(0);
-      name = namePrompt.toString();
-    }
-
-    const generator = new GeneratorService(process.cwd(), options.dryRun);
-
-    try {
-      await generator.generate(type, name);
-      // El servicio se encarga de los logs específicos
-    } catch (error: any) {
-      console.error(pc.red(`❌ Error: ${error.message}`));
-      process.exit(1);
-    }
-  });
+// --- Comando: INFO ---
+cli.command("info", "Display project details").action(() => {
+  console.log(pc.bold(pc.cyan(`\n🦊 Karin-JS CLI v${version}\n`)));
+  console.log(pc.green("  System:"));
+  console.log(`    OS: ${process.platform} ${process.arch}`);
+  console.log(`    Bun: ${Bun.version}`);
+  console.log(pc.green("  Framework:"));
+  console.log(`    Core: Installed (Workspace)`);
+});
 
 cli.help();
 cli.version(version);
