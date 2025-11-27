@@ -1,5 +1,11 @@
 # @karin-js/cli
 
+## 0.2.2
+
+### Patch Changes
+
+- fix: minor fixes with template generation
+
 ## 0.2.1
 
 ### Patch Changes
