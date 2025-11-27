@@ -1,5 +1,11 @@
 # @karin-js/core
 
+## 0.2.1
+
+### Patch Changes
+
+- feat: Add custom decorators support, manual controllers option & new logger design.
+
 ## 0.2.0
 
 ### Minor Changes
