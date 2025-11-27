@@ -14,10 +14,22 @@ export class KarinFactory {
 
   static async create(
     adapter: IHttpAdapter,
-    options: { scan?: string; cwd?: string } = {}
+    options: { scan?: string; cwd?: string; controllers?: any[] } = {}
   ): Promise<KarinApplication> {
     const app = new KarinApplication(adapter);
     const explorer = new RouterExplorer(adapter);
+
+    if (options.controllers) {
+      this.logger.info(
+        `Registering ${options.controllers.length} manual controllers`
+      );
+      for (const ControllerClass of options.controllers) {
+        explorer.explore(app, ControllerClass);
+      }
+    }
+
+    if (options.scan) {
+    }
 
     const scanPath = options.scan || "./src/**/*.controller.ts";
 

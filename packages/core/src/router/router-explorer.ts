@@ -128,12 +128,21 @@ export class RouterExplorer {
     const adapterMethod = (this.adapter as any)[httpMethod.toLowerCase()];
 
     const methodColor = this.getMethodColor(httpMethod);
-    const coloredMethod = methodColor(httpMethod.padEnd(6)); // Alineado a 6 caracteres
+    const coloredMethod = pc.bold(methodColor(httpMethod.padEnd(7))); // 7 espacios para alinear (DELETE es largo)
 
-    const routeInfo = `${coloredMethod} ${fullPath}`;
-    const controllerInfo = pc.dim(`-> ${controllerClass.name}`); // Nombre del controlador en gris
+    // 2. Ruta: Blanca billante
+    const routeInfo = pc.yellow(fullPath);
 
-    this.logger.log(`${routeInfo} ${controllerInfo}`);
+    // 3. Separador: "::" en gris, se ve técnico y limpio
+    const separator = pc.dim("::");
+
+    // 4. Controlador: Cyan (Azul neón), destaca mucho más que el gris
+    const controllerInfo = pc.cyan(controllerClass.name);
+
+    // Resultado: GET     /users :: UsersController
+    this.logger.log(
+      `${coloredMethod} ${controllerInfo} ${separator} ${routeInfo}`
+    );
 
     if (adapterMethod) {
       adapterMethod.call(this.adapter, fullPath, async (ctx: any) => {

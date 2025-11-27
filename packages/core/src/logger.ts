@@ -51,25 +51,23 @@ export class Logger {
   ) {
     if (Logger.level > level) return;
 
-    // --- DISEÑO PREMIUM ---
+    // --- DISEÑO "DASHBOARD" ---
+    // 🦊 | 10:42:00 | INFO | RouterExplorer     Mensaje...
 
-    // 1. Icono del Framework (Minimalista)
-    const icon = "🦊";
+    const pid = process.pid;
+    const prefix = pc.bold(pc.cyan(`🦊`));
+    const separator = pc.dim("│"); // Tubería fina
 
-    // 2. Timestamp (Gris tenue para no distraer)
     const time = new Date().toLocaleTimeString("en-US", { hour12: false });
     const timestamp = pc.dim(time);
 
-    // 3. Nivel (Coloreado y Bold)
     const lvl = pc.bold(colorFn(levelLabel));
 
-    // 4. Contexto (Amarillo brillante, entre corchetes para destacar el origen)
-    const ctx = pc.yellow(`[${this.context}]`);
+    // Contexto sin corchetes, alineado y en color amarillo
+    const ctx = pc.yellow(this.context.padEnd(19));
 
-    // 5. Mensaje (Blanco/Default)
-    const msg = message;
-
-    // Formato final: 🦊 19:35:02 INFO [RouterExplorer] Mensaje...
-    console.log(`${icon} ${timestamp} ${lvl} ${ctx} ${msg}`);
+    console.log(
+      `${prefix} ${separator} ${timestamp} ${separator} ${lvl} ${separator} ${ctx} ${message}`
+    );
   }
 }
