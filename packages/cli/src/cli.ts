@@ -15,6 +15,7 @@ import { downloadTemplate } from "giget";
 import { join } from "path";
 import { GeneratorService } from "./services/generator.service";
 import { existsSync, readFileSync } from "fs";
+import { updateKarinDependencies } from "./utils/dependencies";
 
 const version = "0.0.1";
 const cli = cac("karin");
@@ -97,6 +98,8 @@ cli
       });
 
       s.message("Template downloaded!");
+
+      await updateKarinDependencies(targetDir);
 
       if (initGit) {
         await Bun.spawn(["git", "init"], {
