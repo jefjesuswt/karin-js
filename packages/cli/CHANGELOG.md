@@ -1,5 +1,11 @@
 # @karin-js/cli
 
+## 0.4.0
+
+### Minor Changes
+
+- add interactive CRUD generator for resources
+
 ## 0.3.2
 
 ### Patch Changes
