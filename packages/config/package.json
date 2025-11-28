@@ -1,6 +1,6 @@
 {
   "name": "@karin-js/config",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Type-safe configuration management for KarinJS",
   "module": "index.ts",
   "type": "module",

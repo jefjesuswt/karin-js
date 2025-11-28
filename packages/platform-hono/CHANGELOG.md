@@ -1,5 +1,13 @@
 # @karin-js/platform-hono
 
+## 0.3.3
+
+### Patch Changes
+
+- updated minor dependencies, implement smart config plugin, robust mongoose plugin with auto-discovery, and zero-config core bootstrapping
+- Updated dependencies
+  - @karin-js/core@0.4.1
+
 ## 0.3.2
 
 ### Patch Changes
