@@ -81,6 +81,11 @@ cli
             label: "Hono",
             hint: "Best compatibility for Cloudflare/Deno",
           },
+          {
+            value: "h3",
+            label: "H3",
+            hint: "High Performance (Recommended)",
+          },
         ],
       });
 
@@ -88,7 +93,22 @@ cli
         cancel("Operation cancelled.");
         process.exit(0);
       }
-      templateSuffix = `serverless-${fw}`; // ej: serverless-hono
+
+      const platform = await select({
+        message: "Select a target platform:",
+        options: [
+          { value: "cloudflare", label: "Cloudflare Workers" },
+          { value: "deno", label: "Deno Deploy" },
+          { value: "vercel", label: "Vercel Edge" },
+        ],
+      });
+
+      if (isCancel(platform)) {
+        cancel("Operation cancelled.");
+        process.exit(0);
+      }
+
+      templateSuffix = `${fw}-${platform}`; // ej: hono-cloudflare
     } else {
       // Entorno Server
       const fw = await select({

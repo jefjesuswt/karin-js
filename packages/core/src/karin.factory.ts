@@ -1,6 +1,5 @@
 import "reflect-metadata";
-import { join, dirname } from "path";
-import { existsSync } from "fs";
+// ❌ ELIMINADOS imports top-level de 'path' y 'fs' para compatibilidad Edge
 import { CONTROLLER_METADATA } from "./decorators/constants";
 import { Logger } from "./logger";
 import { isConstructor } from "./utils/type-guards";
@@ -22,16 +21,20 @@ export class KarinFactory {
     adapter: IHttpAdapter,
     options: KarinFactoryOptions = {}
   ): Promise<KarinApplication> {
-    // 1. Detección de raíz (Solo si vamos a escanear)
-    // En serverless 'cwd' puede fallar o no tener sentido, así que somos defensivos
-    const root =
-      options.cwd ?? (options.scan ? KarinFactory.findProjectRoot() : "/");
+
+    // 1. Detección de raíz (MODIFICADO: Ahora es asíncrono y condicional)
+    let root = "/";
+
+    // Solo intentamos buscar el root si vamos a escanear. 
+    // Si scan es false (Serverless), nos ahorramos importar 'path'/'fs'.
+    if (options.scan !== false) {
+      root = options.cwd ?? (await KarinFactory.findProjectRoot());
+    }
 
     const app = new KarinApplication(adapter, root);
     const explorer = new RouterExplorer(adapter);
 
     // 2. Carga Manual (ESTRATEGIA SERVERLESS / MANUAL)
-    // Esta es la ruta crítica para Cloudflare Workers
     if (options.controllers && options.controllers.length > 0) {
       this.logger.info(
         `Registering ${options.controllers.length} manual controllers`
@@ -43,14 +46,13 @@ export class KarinFactory {
       }
 
       // 🚀 OPTIMIZACIÓN: Si hay controladores manuales y no se fuerza scan,
-      // retornamos inmediatamente. Esto evita cargar 'bun' o 'fs', permitiendo Tree-Shaking.
+      // retornamos inmediatamente.
       if (!options.scan) {
         return app;
       }
     }
 
     // 3. Escaneo Automático (ESTRATEGIA SERVIDOR TRADICIONAL)
-    // Por defecto es true, salvo que se haya desactivado explícitamente
     if (options.scan !== false) {
       await this.scanControllers(
         root,
@@ -71,6 +73,18 @@ export class KarinFactory {
     app: KarinApplication,
     strict?: boolean
   ) {
+    // 🛡️ Lazy import de 'path' para no romper en Edge
+    let join: any;
+    try {
+      // Usamos variable para engañar al bundler si fuera necesario, 
+      // aunque el dynamic import suele ser suficiente.
+      const pathMod = await import("path");
+      join = pathMod.join;
+    } catch {
+      this.logger.warn("Path module not available (Edge environment). Skipping scan.");
+      return;
+    }
+
     const scanPath =
       typeof scanOption === "string"
         ? scanOption
@@ -80,9 +94,12 @@ export class KarinFactory {
 
     try {
       // ⚠️ DYNAMIC IMPORT: Vital para compatibilidad
-      // Solo cargamos 'bun' si el runtime lo soporta.
       if (typeof Bun !== "undefined") {
-        const { Glob } = await import("bun");
+        // 🛡️ TRUCO: Usamos una variable para el nombre del paquete.
+        // Esto evita que Wrangler/Esbuild intenten resolver "bun" estáticamente y fallen.
+        const bunPkg = "bun";
+        const { Glob } = await import(bunPkg);
+
         const globScanner = new Glob(scanPath);
 
         for await (const file of globScanner.scan(root)) {
@@ -90,13 +107,12 @@ export class KarinFactory {
           await this.loadModule(absolutePath, explorer, app, strict);
         }
       } else {
-        // Fallback futuro para Node.js (glob de npm)
+        // Fallback futuro para Node.js
         this.logger.warn(
           "Auto-scan is currently optimized for Bun runtime. Skipping scan."
         );
       }
     } catch (e: any) {
-      // En entornos restringidos (Edge), esto captura el error y permite seguir
       this.logger.warn(
         `File scanning skipped/failed (likely Serverless environment): ${e.message}`
       );
@@ -126,8 +142,13 @@ export class KarinFactory {
     }
   }
 
-  private static findProjectRoot(): string {
+  private static async findProjectRoot(): Promise<string> {
     try {
+      // 🛡️ Lazy imports de 'fs' y 'path'
+      // Esto solo se ejecuta si scan !== false, así que en Serverless nunca entra aquí.
+      const { join, dirname } = await import("path");
+      const { existsSync } = await import("fs");
+
       if (typeof Bun !== "undefined" && Bun.main) {
         let currentDir = dirname(Bun.main);
         while (currentDir !== "/" && currentDir !== ".") {
@@ -142,7 +163,7 @@ export class KarinFactory {
       }
       return process.cwd();
     } catch {
-      return "/"; // Fallback seguro para entornos sin acceso a process/fs
+      return "/"; // Fallback seguro
     }
   }
 }

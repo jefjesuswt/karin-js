@@ -78,21 +78,32 @@ export class HonoAdapter implements IHttpAdapter<Context, Request, Context> {
   async readBody(c: Context) {
     const contentType = c.req.header("Content-Type") || "";
 
+    // 🔥 FIX: Parseo manual seguro para evitar que Hono lance excepciones 500
+    // cuando el JSON está mal formado.
     if (contentType.includes("application/json")) {
-      return c.req.json();
+      try {
+        const text = await c.req.text();
+        return JSON.parse(text);
+      } catch {
+        return undefined;
+      }
     }
+
     if (
       contentType.includes("multipart/form-data") ||
       contentType.includes("application/x-www-form-urlencoded")
     ) {
       return c.req.parseBody();
     }
+
     if (contentType.includes("text/plain")) {
       return c.req.text();
     }
 
+    // Fallback
     try {
-      return await c.req.json();
+      const text = await c.req.text();
+      return JSON.parse(text);
     } catch {
       return undefined;
     }

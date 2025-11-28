@@ -6,7 +6,7 @@ import {
   getQuery,
   getRouterParams,
   type H3Event,
-  setResponseHeader,
+  setResponseStatus,
 } from "h3";
 
 export class H3Adapter implements IHttpAdapter<H3Event> {
@@ -50,11 +50,16 @@ export class H3Adapter implements IHttpAdapter<H3Event> {
 
   enableCors() {
     this.app.use((event) => {
-      return handleCors(event, {
+      const handled = handleCors(event, {
         origin: "*",
         methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
         preflight: { statusCode: 204 },
       });
+
+      if (handled) {
+        event.res.status = 204;
+        return null;
+      }
     });
   }
 

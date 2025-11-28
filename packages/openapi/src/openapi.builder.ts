@@ -15,7 +15,7 @@ import { ZodValidationPipe } from "@karin-js/core"; // Asegúrate de exportar es
 export class OpenApiBuilder {
   private registry = new OpenAPIRegistry();
 
-  constructor(private readonly app: KarinApplication) {}
+  constructor(private readonly app: KarinApplication) { }
 
   public build() {
     const controllers = this.app.getControllers();
@@ -101,13 +101,17 @@ export class OpenApiBuilder {
     }
 
     // Registrar en el registro de OpenAPI
+    // Registrar en el registro de OpenAPI
+    const requestConfig: any = {};
+    if (requestBodySchema) {
+      requestConfig.body = requestBodySchema;
+    }
+
     this.registry.registerPath({
       method: httpMethod.toLowerCase() as any,
       path: swaggerPath,
       tags: [controller.name.replace("Controller", "")],
-      request: {
-        body: requestBodySchema,
-      },
+      request: Object.keys(requestConfig).length > 0 ? requestConfig : undefined,
       responses: {
         200: {
           description: "Successful response",

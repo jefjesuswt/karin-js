@@ -1,10 +1,10 @@
 export const toPascalCase = (str: string) =>
   str
-    .replace(/(?:^\w|[A-Z]|\b\w)/g, (word, index) =>
-      index === 0 ? word.toUpperCase() : word.toUpperCase()
+    .replace(/[-_]+/g, " ")
+    .replace(/(?:^\w|[A-Z]|\b\w)/g, (word) =>
+      word.toUpperCase()
     )
-    .replace(/\s+/g, "")
-    .replace(/-/g, "");
+    .replace(/\s+/g, "");
 
 export const toKebabCase = (str: string) =>
   str
