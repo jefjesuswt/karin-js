@@ -1,5 +1,13 @@
 # @karin-js/platform-hono
 
+## 0.3.5
+
+### Patch Changes
+
+- minor fixes, added serverless capabilities (test)
+- Updated dependencies
+  - @karin-js/core@0.5.3
+
 ## 0.3.4
 
 ### Patch Changes

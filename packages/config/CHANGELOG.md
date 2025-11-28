@@ -1,5 +1,13 @@
 # @karin-js/config
 
+## 2.0.3
+
+### Patch Changes
+
+- minor fixes, added serverless capabilities (test)
+- Updated dependencies
+  - @karin-js/core@0.5.3
+
 ## 2.0.2
 
 ### Patch Changes

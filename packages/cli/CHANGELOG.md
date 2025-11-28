@@ -1,5 +1,11 @@
 # @karin-js/cli
 
+## 0.4.1
+
+### Patch Changes
+
+- minor fixes, added serverless capabilities (test)
+
 ## 0.4.0
 
 ### Minor Changes

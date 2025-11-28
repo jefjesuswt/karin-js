@@ -1,5 +1,12 @@
 # @karin-js/redis
 
+## 2.0.3
+
+### Patch Changes
+
+- Updated dependencies
+  - @karin-js/core@0.5.3
+
 ## 2.0.2
 
 ### Patch Changes

@@ -1,5 +1,13 @@
 # @karinjs/platform-h3
 
+## 0.2.5
+
+### Patch Changes
+
+- minor fixes, added serverless capabilities (test)
+- Updated dependencies
+  - @karin-js/core@0.5.3
+
 ## 0.2.4
 
 ### Patch Changes
