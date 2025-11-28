@@ -1,5 +1,11 @@
 # @karin-js/cli
 
+## 0.5.0
+
+### Minor Changes
+
+- added serverless templates
+
 ## 0.4.2
 
 ### Patch Changes
