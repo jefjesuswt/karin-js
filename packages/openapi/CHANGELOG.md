@@ -1,5 +1,12 @@
 # @karin-js/openapi
 
+## 1.0.2
+
+### Patch Changes
+
+- Updated dependencies
+  - @karin-js/core@0.5.2
+
 ## 1.0.1
 
 ### Patch Changes

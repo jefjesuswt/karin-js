@@ -1,5 +1,11 @@
 # @karin-js/core
 
+## 0.5.2
+
+### Patch Changes
+
+- minor fixes to ui on router
+
 ## 0.5.1
 
 ### Patch Changes
