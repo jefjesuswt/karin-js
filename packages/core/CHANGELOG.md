@@ -1,5 +1,11 @@
 # @karin-js/core
 
+## 0.5.4
+
+### Patch Changes
+
+- added unit tests and minor fixes to serverless implementation
+
 ## 0.5.3
 
 ### Patch Changes
