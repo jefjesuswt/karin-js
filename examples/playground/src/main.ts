@@ -1,57 +1,47 @@
 import "reflect-metadata";
 import { KarinFactory, Logger } from "@karin-js/core";
-import { HonoAdapter } from "../../../packages/platform-hono";
-import { HttpErrorFilter } from "./filters/http.filter";
-import { MongoosePlugin } from "../../../packages/mongoose";
-import { RedisPlugin } from "../../../packages/redis";
-import { ConfigPlugin, z } from "../../../packages/config";
+import { HonoAdapter } from "@karin-js/platform-hono";
+import { ConfigPlugin } from "@karin-js/config";
+import { MongoosePlugin } from "@karin-js/mongoose";
 
 async function bootstrap() {
   const logger = new Logger("Bootstrap");
 
   const app = await KarinFactory.create(new HonoAdapter(), {
-    scan: "./src/**/*.controller.ts",
+    scan: "./src/**/*.ts",
   });
 
-  // app.useGlobalFilters(new HttpErrorFilter());
+  const config = new ConfigPlugin({
+    // 👇 Solución limpia: Usamos ?? o || para asegurar que nunca sea undefined
+    load: () => ({
+      // Si PORT es undefined, pasamos "3000" a parseInt.
+      // O mejor aún, hacemos el parseInt seguro.
+      port: parseInt(process.env.PORT || "3000", 10),
 
-  // app.use(
-  //   new MongoosePlugin({
-  //     uri:
-  //       process.env.MONGO_URI ||
-  //       "mongodb+srv://jefjesuswt:dai1jeff@dicasa.ef1zp8v.mongodb.net/?appName=Dicasa",
-  //     scanModels: "./src/**/schemas/*.schema.ts",
-  //   })
-  // );
+      // Si es undefined, usa string vacío o un valor por defecto seguro
+      // Esto evita que TS se queje de 'string | undefined'
+      mongoUri: process.env.MONGO_URI || "mongodb://localhost:27017/test",
 
-  // app.use(
-  //   new RedisPlugin({
-  //     url: process.env.REDIS_URL || "redis://localhost:6379",
+      dbName: process.env.DB_NAME || "test_db",
+    }),
+  });
 
-  //     options: {
-  //       family: 4,
-  //     },
+  app.use(config);
 
-  //     failureStrategy: process.env.NODE_ENV === "production" ? "fail" : "warn",
-  //   })
-  // );
-  //
   app.use(
-    new ConfigPlugin({
-      schema: z.object({
-        PORT: z.coerce.number().default(3000), // Coerce convierte string "3000" a number 3000
-        DB_HOST: z.string(),
-        API_KEY: z.string().min(5),
-        NODE_ENV: z
-          .enum(["development", "production", "test"])
-          .default("development"),
-      }),
+    new MongoosePlugin({
+      uri: config.get("mongoUri"),
+      options: {
+        dbName: config.get("dbName"),
+        authSource: "admin",
+      },
     })
   );
 
-  const port = 3000;
-  app.listen(port, () => {
-    logger.log(`Server started successfully on http://localhost:${port}`);
+  app.listen(config.get("port"), () => {
+    logger.log(
+      `🦊 Karin-JS Server running on http://localhost:${config.get("port")}`
+    );
   });
 }
 

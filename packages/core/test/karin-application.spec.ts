@@ -19,7 +19,8 @@ describe("KarinApplication", () => {
   });
 
   it("should register plugins correctly", () => {
-    const app = new KarinApplication(mockAdapter);
+    // ✅ FIX: Pasamos el 'root' requerido por el constructor
+    const app = new KarinApplication(mockAdapter, process.cwd());
 
     const mockPlugin: KarinPlugin = {
       name: "TestPlugin",
@@ -32,7 +33,8 @@ describe("KarinApplication", () => {
   });
 
   it("should execute onPluginInit lifecycle hook on initialization", async () => {
-    const app = new KarinApplication(mockAdapter);
+    // ✅ FIX: Pasamos el 'root'
+    const app = new KarinApplication(mockAdapter, process.cwd());
 
     const mockPlugin: KarinPlugin = {
       name: "DBPlugin",
@@ -47,7 +49,8 @@ describe("KarinApplication", () => {
   });
 
   it("should delegate enableCors to the adapter", () => {
-    const app = new KarinApplication(mockAdapter);
+    // ✅ FIX: Pasamos el 'root'
+    const app = new KarinApplication(mockAdapter, process.cwd());
     app.enableCors({ origin: "*" });
     expect(mockAdapter.enableCors).toHaveBeenCalled();
   });

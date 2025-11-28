@@ -21,6 +21,7 @@ import type {
   ExceptionFilter,
   KarinInterceptor,
   CallHandler,
+  Type,
 } from "../interfaces";
 import { ParamsResolver } from "./param-resolver";
 import type { RouteParamMetadata } from "../decorators";
@@ -98,7 +99,7 @@ export class RouterExplorer {
 
   private registerRoute(
     app: KarinApplication,
-    ControllerClass: any, // Recibimos la Clase
+    ControllerClass: Type<any>,
     method: Function,
     methodName: string,
     prefix: string,
@@ -189,15 +190,24 @@ export class RouterExplorer {
             // En este punto, app.use() ya corrió y los modelos están registrados.
             const controllerInstance = container.resolve(ControllerClass);
 
-            // Hacemos bind del método a la instancia
-            const handlerInstance =
-              controllerInstance[methodName].bind(controllerInstance);
+            const handlerMethod = Reflect.get(
+              controllerInstance as object,
+              methodName
+            );
+
+            if (typeof handlerMethod !== "function") {
+              throw new Error(
+                `Method '${methodName}' not found in controller instance '${ControllerClass.name}'`
+              );
+            }
+
+            const handlerInstance = handlerMethod.bind(controllerInstance);
 
             const executionContext = new KarinExecutionContext(
               this.adapter,
               ctx,
               ControllerClass,
-              handlerInstance // Usamos el handler vinculado
+              handlerInstance
             );
 
             // 1. Guards
@@ -242,7 +252,7 @@ export class RouterExplorer {
       // Logging
       const methodColor = this.getMethodColor(httpMethod);
       const coloredMethod = pc.bold(methodColor(httpMethod.padEnd(7)));
-      const routeInfo = fullPath.padEnd(40);
+      const routeInfo = fullPath.padEnd(26);
       const separator = pc.dim("::");
       const controllerInfo = pc.cyan(ControllerClass.name);
 

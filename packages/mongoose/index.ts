@@ -3,8 +3,9 @@ export * from "./src/utils/decorators";
 
 export {
   default as mongoose,
-  Schema,
   model,
   Document,
-  type Model,
+  Model,
+  Types,
+  Schema as MongooseSchema,
 } from "mongoose";

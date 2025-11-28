@@ -1,6 +1,6 @@
 import "reflect-metadata";
 import { Glob } from "bun";
-import { join, dirname, sep } from "path";
+import { join, dirname } from "path";
 import { existsSync } from "fs";
 import { CONTROLLER_METADATA } from "./decorators/constants";
 import { Logger } from "./logger";
@@ -10,15 +10,9 @@ import type { IHttpAdapter } from "./interfaces";
 import { RouterExplorer } from "./router/router-explorer";
 
 export interface KarinFactoryOptions {
-  /** Ruta glob para buscar controladores (ej: "./src/*.ts"). Si se omite, se usa el default. */
   scan?: string;
-  /** Directorio de trabajo manual. Si se omite, se autodetecta. */
   cwd?: string;
-  /** Lista de controladores para registrar manualmente (útil para tests o monorepos estrictos). */
   controllers?: any[];
-  /** * Si es true, el framework lanzará una excepción y detendrá el arranque si falla al cargar un archivo.
-   * Por defecto es false (solo loguea el error y continúa).
-   */
   strict?: boolean;
 }
 
@@ -29,22 +23,13 @@ export class KarinFactory {
     adapter: IHttpAdapter,
     options: KarinFactoryOptions = {}
   ): Promise<KarinApplication> {
-    // 1. INPUT VALIDATION (Seguridad)
-    if (options.scan !== undefined && typeof options.scan !== "string") {
-      throw new TypeError('Option "scan" must be a string');
-    }
-    if (
-      options.controllers !== undefined &&
-      !Array.isArray(options.controllers)
-    ) {
-      throw new TypeError('Option "controllers" must be an array');
-    }
-
+    // 1. DETECCIÓN AUTOMÁTICA DE RAÍZ (La magia)
     const root = options.cwd ?? KarinFactory.findProjectRoot();
+
     const app = new KarinApplication(adapter, root);
     const explorer = new RouterExplorer(adapter);
 
-    // 2. Carga Manual de Controladores (Prioridad Alta)
+    // ... Carga manual de controllers (código existente) ...
     if (options.controllers && options.controllers.length > 0) {
       this.logger.info(
         `Registering ${options.controllers.length} manual controllers`
@@ -56,55 +41,36 @@ export class KarinFactory {
       }
     }
 
-    // 3. Escaneo Automático
-    // Escaneamos si se pidió explícitamente O si no hay controladores manuales
+    // 2. ESCANEO INTELIGENTE RELATIVO AL ROOT
     const shouldScan = options.scan || !options.controllers;
 
     if (shouldScan) {
+      // Por defecto buscamos en src/ dentro del root detectado
       const scanPath =
         typeof options.scan === "string"
           ? options.scan
-          : "./src/**/*.controller.ts";
+          : join("src", "**", "*.controller.ts");
 
+      // Glob escanea relativo al root
       const glob = new Glob(scanPath);
-
-      this.logger.info(`Project Root: ${root}`);
-      this.logger.info(`Scanning controllers in: ${scanPath}`);
+      this.logger.info(`Scanning files in: ${scanPath}...`);
 
       for await (const file of glob.scan(root)) {
         const absolutePath = join(root, file);
-
-        // 4. ERROR HANDLING ROBUSTO
         try {
-          // Importación dinámica protegida
           const module = await import(absolutePath);
-
-          // Iteración segura sobre las exportaciones
           for (const key of Object.keys(module)) {
             const CandidateClass = module[key];
-
-            try {
-              // Verificación de metadatos protegida
-              if (
-                isConstructor(CandidateClass) &&
-                Reflect.hasMetadata(CONTROLLER_METADATA, CandidateClass)
-              ) {
-                explorer.explore(app, CandidateClass);
-              }
-            } catch (explorerError: any) {
-              this.logger.error(
-                `Failed to register controller ${key} from ${file}: ${explorerError.message}`
-              );
-              // Si estamos en modo estricto, detenemos el arranque
-              if (options.strict) throw explorerError;
+            if (
+              isConstructor(CandidateClass) &&
+              Reflect.hasMetadata(CONTROLLER_METADATA, CandidateClass)
+            ) {
+              explorer.explore(app, CandidateClass);
             }
           }
-        } catch (importError: any) {
-          this.logger.error(
-            `Failed to import controller file: ${file}. Error: ${importError.message}`
-          );
-          // Error crítico de sintaxis o archivo corrupto
-          if (options.strict) throw importError;
+        } catch (error: any) {
+          this.logger.error(`Error loading ${file}: ${error.message}`);
+          if (options.strict) throw error;
         }
       }
     }
@@ -112,18 +78,26 @@ export class KarinFactory {
     return app;
   }
 
+  /**
+   * Encuentra la carpeta del proyecto (donde está el package.json)
+   * basándose en el archivo principal que se está ejecutando (main.ts).
+   */
   private static findProjectRoot(): string {
-    let dir = import.meta.dir;
+    // Si estamos en Bun, usamos el punto de entrada real
+    if (typeof Bun !== "undefined" && Bun.main) {
+      let currentDir = dirname(Bun.main);
 
-    while (dir !== "/" && dir !== ".") {
-      if (existsSync(join(dir, "package.json"))) {
-        return dir;
+      // Subimos niveles hasta encontrar package.json
+      while (currentDir !== "/" && currentDir !== ".") {
+        if (existsSync(join(currentDir, "package.json"))) {
+          return currentDir;
+        }
+        const parent = dirname(currentDir);
+        if (parent === currentDir) break;
+        currentDir = parent;
       }
-      const parent = dirname(dir);
-      if (parent === dir) break;
-      dir = parent;
+      return dirname(Bun.main); // Fallback al dir del script
     }
-
-    throw new Error("Project root not found");
+    return process.cwd(); // Fallback para Node o casos raros
   }
 }

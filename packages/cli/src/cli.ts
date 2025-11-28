@@ -22,15 +22,12 @@ const cli = cac("karin");
 
 const TEMPLATE_OWNER = "jefjesuswt";
 
-// --- Comando: NEW ---
 cli
   .command("new [name]", "Create a new Karin-JS project")
   .action(async (name) => {
-    // ✅ CORRECCIÓN: Solo recibe 'name'
     console.clear();
     intro(pc.bgCyan(pc.black(" 🦊 Karin-JS Creator ")));
 
-    // 1. Obtener nombre
     if (!name) {
       const namePrompt = await text({
         message: "What is the name of your project?",
@@ -50,7 +47,6 @@ cli
       name = namePrompt;
     }
 
-    // 2. Seleccionar Template
     const templateType = await select({
       message: "Pick a project type.",
       options: [
@@ -64,7 +60,6 @@ cli
       process.exit(0);
     }
 
-    // 3. Git & Deps
     const initGit = await confirm({
       message: "Initialize a new git repository?",
       initialValue: true,
@@ -83,7 +78,6 @@ cli
       process.exit(0);
     }
 
-    // 4. Proceso
     const s = spinner();
     s.start("Scaffolding project...");
 
@@ -104,7 +98,7 @@ cli
       if (initGit) {
         await Bun.spawn(["git", "init"], {
           cwd: targetDir,
-          stdout: "ignore", // ✅ Silenciamos Git
+          stdout: "ignore",
           stderr: "ignore",
         }).exited;
       }

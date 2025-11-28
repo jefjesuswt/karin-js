@@ -20,6 +20,10 @@ import { UseInterceptors } from "../../src/decorators/interceptor";
 // --- Mocks y Clases de Prueba ---
 
 const mockGuardCanActivate = mock((...args: any[]) => true);
+const mockAdapter = {
+  listen: mock(),
+  enableCors: mock(),
+} as unknown as IHttpAdapter;
 
 class TestGuard implements CanActivate {
   canActivate(context: ExecutionContext) {
@@ -81,7 +85,7 @@ describe("RouterExplorer", () => {
       getResponse: mock(() => ({})),
     };
 
-    app = new KarinApplication(mockAdapter as IHttpAdapter);
+    app = new KarinApplication(mockAdapter, process.cwd());
     explorer = new RouterExplorer(mockAdapter as IHttpAdapter);
   });
 

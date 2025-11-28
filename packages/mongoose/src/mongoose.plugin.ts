@@ -4,20 +4,13 @@ import {
   Logger,
   container,
 } from "@karin-js/core";
-import mongoose, { type ConnectOptions, type Mongoose, Model } from "mongoose";
-import { getModelToken } from "./utils";
-import { Glob } from "bun"; // Usamos Glob de Bun
-import { join } from "path";
+import mongoose, { type ConnectOptions, type Mongoose } from "mongoose";
+import { SCHEMA_METADATA, SCHEMAS_REGISTRY } from "./utils/decorators";
+import { SchemaFactory } from "./utils/schema.factory"; // Importamos la factory
 
 export interface MongoosePluginOptions {
   uri: string;
   options?: ConnectOptions;
-  /** Lista manual de modelos */
-  models?: Model<any>[];
-  /** * Patrón Glob para escanear modelos automáticamente.
-   * Ej: './src/**\/*.schema.ts'
-   */
-  scanModels?: string;
 }
 
 export class MongoosePlugin implements KarinPlugin {
@@ -27,86 +20,59 @@ export class MongoosePlugin implements KarinPlugin {
 
   constructor(private readonly config: MongoosePluginOptions) {}
 
-  // install corre sincrónicamente al hacer app.use()
-  // Pero el escaneo es asíncrono, así que lo movemos a onPluginInit
   install(app: KarinApplication) {
-    if (this.config.models) {
-      this.registerModels(this.config.models);
-    }
+    // FASE 1: Construcción y Registro de Modelos
+    this.registerModels();
   }
 
   async onPluginInit() {
+    // FASE 2: Conexión
     try {
-      // 1. Escaneo Automático
-      if (this.config.scanModels) {
-        await this.scanAndRegisterModels(this.config.scanModels);
-      }
-
-      // 2. Conexión
-      const safeUri = this.config.uri.replace(
-        /\/\/([^:]+):([^@]+)@/,
-        "//***:***@"
-      );
-      this.logger.log(`Connecting to ${safeUri}...`);
+      if (!this.config.uri) throw new Error("URI is required");
 
       this.connection = await mongoose.connect(
         this.config.uri,
         this.config.options
       );
-      container.registerInstance("MONGO_CONNECTION", this.connection);
 
-      this.logger.log("✅ Connected successfully");
+      container.registerInstance("MONGO_CONNECTION", this.connection);
+      this.logger.log("✅ Connected to MongoDB");
     } catch (error: any) {
-      this.logger.error(`❌ Connection failed: ${error.message}`);
+      this.logger.error(`Connection failed: ${error.message}`);
       throw error;
     }
   }
 
-  private registerModels(models: Model<any>[]) {
-    for (const model of models) {
-      const token = getModelToken(model.modelName);
-      container.registerInstance(token, model);
-      this.logger.debug(`Model registered: ${model.modelName} -> ${token}`);
+  private registerModels() {
+    if (SCHEMAS_REGISTRY.size === 0) {
+      this.logger.warn("No schemas found via @Schema decorator.");
+      return;
     }
-  }
 
-  private async scanAndRegisterModels(pattern: string) {
-    const glob = new Glob(pattern);
-    const cwd = process.cwd();
-    this.logger.debug(`Scanning models in: ${pattern}`);
+    for (const ModelClass of SCHEMAS_REGISTRY) {
+      // 1. Obtener Metadatos
+      const meta = Reflect.getMetadata(SCHEMA_METADATA, ModelClass);
+      const modelName = meta?.name || ModelClass.name;
 
-    for await (const file of glob.scan(cwd)) {
-      const absolutePath = join(cwd, file);
-      try {
-        const module = await import(absolutePath);
+      // 2. Generar el Schema real usando la Fábrica
+      const schema = SchemaFactory.createForClass(ModelClass as Function);
 
-        // Buscamos exportaciones que sean modelos de Mongoose
-        const foundModels: Model<any>[] = [];
+      // 3. Crear el Modelo de Mongoose REAL
+      // Nota: mongoose.model registra el modelo globalmente en la conexión por defecto
+      const modelInstance = mongoose.model(modelName, schema);
 
-        for (const key of Object.keys(module)) {
-          const value = module[key];
-          // Heurística: ¿Es un Modelo de Mongoose?
-          // value.prototype es undefined en modelos compilados, pero value.modelName existe
-          if (value && value.modelName && typeof value.find === "function") {
-            foundModels.push(value);
-          }
-        }
+      // 4. Registrar la INSTANCIA del modelo en el contenedor de Karin
+      // Ahora cuando inyectes esto, recibirás el modelo de Mongoose (con .find, .create, etc.)
+      const token = `MONGO_MODEL_${modelName.toUpperCase()}`;
+      container.registerInstance(token, modelInstance);
 
-        if (foundModels.length > 0) {
-          this.registerModels(foundModels);
-        }
-      } catch (error: any) {
-        this.logger.warn(
-          `Failed to import model file ${file}: ${error.message}`
-        );
-      }
+      this.logger.log(`Model registered: ${modelName} -> ${token}`);
     }
   }
 
   async onPluginDestroy() {
     if (this.connection) {
       await this.connection.disconnect();
-      this.logger.log("Disconnected gracefully");
     }
   }
 }
