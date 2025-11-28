@@ -1,6 +1,6 @@
 {
   "name": "@karin-js/mongoose",
-  "version": "1.0.1",
+  "version": "2.0.0",
   "description": "Professional Mongoose integration for KarinJS",
   "module": "index.ts",
   "type": "module",

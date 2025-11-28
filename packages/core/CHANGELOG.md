@@ -1,5 +1,11 @@
 # @karin-js/core
 
+## 0.5.0
+
+### Minor Changes
+
+- Added Application Registry system (getControllers) and exposed Zod schemas in validation pipes to support OpenAPI generation.
+
 ## 0.4.1
 
 ### Patch Changes
