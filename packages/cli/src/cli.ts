@@ -53,13 +53,13 @@ cli
       options: [
         {
           value: "server",
-          label: "Traditional Server (Bun/Node)",
-          hint: "Long running process",
+          label: "Traditional Server (Bun)",
+          hint: "The good old way...",
         },
         {
           value: "serverless",
           label: "Serverless / Edge",
-          hint: "Cloudflare Workers, Deno Deploy, Vercel",
+          hint: "Cloudflare Workers, Deno Deploy",
         },
       ],
     });
@@ -84,7 +84,7 @@ cli
           {
             value: "h3",
             label: "H3",
-            hint: "High Performance (Recommended)",
+            hint: "High Performance",
           },
         ],
       });
@@ -99,7 +99,6 @@ cli
         options: [
           { value: "cloudflare", label: "Cloudflare Workers" },
           { value: "deno", label: "Deno Deploy" },
-          { value: "vercel", label: "Vercel Edge" },
         ],
       });
 
@@ -108,7 +107,7 @@ cli
         process.exit(0);
       }
 
-      templateSuffix = `${fw}-${platform}`; // ej: hono-cloudflare
+      templateSuffix = `${fw}-${platform}`;
     } else {
       // Entorno Server
       const fw = await select({
@@ -117,7 +116,7 @@ cli
           {
             value: "h3",
             label: "H3",
-            hint: "High Performance (Recommended)",
+            hint: "High Performance",
           },
           { value: "hono", label: "Hono", hint: "Web Standards based" },
         ],
