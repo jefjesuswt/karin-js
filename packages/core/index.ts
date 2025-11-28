@@ -15,11 +15,16 @@ export { KarinExecutionContext } from "./src/context/execution-context";
 // 4. Exceptions
 export * from "./src/exceptions/http.exception";
 
-// 5. Pipes Communes
+// 5. Pipes
 export * from "./src/pipes/zod-validation.pipe";
 export * from "./src/logger";
 
-// 6. External Utilities (Re-exports útiles)
+export {
+  MetadataScanner,
+  type RouteDefinition,
+} from "./src/router/metadata-scanner";
+
+// 6. External Utilities
 export { injectable, inject, singleton, container, delay } from "tsyringe";
 
 export const VERSION = "0.0.6";

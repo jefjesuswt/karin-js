@@ -13,15 +13,23 @@ export class KarinApplication {
   private globalGuards: CanActivate[] = [];
   private plugins: KarinPlugin[] = [];
   private globalFilters: ExceptionFilter[] = [];
+  private controllers: Function[] = [];
 
-  // 👇 Estado para Graceful Shutdown
-  private server?: any; // Referencia al servidor nativo (Bun server)
+  private server?: any;
   private isShuttingDown = false;
   private activeRequests = new Set<Promise<any>>();
   private shutdownHooksRegistered = false;
 
   constructor(private readonly adapter: IHttpAdapter, private root: string) {
     this.root = root ?? process.cwd();
+  }
+
+  public registerController(controller: Function) {
+    this.controllers.push(controller);
+  }
+
+  public getControllers() {
+    return this.controllers;
   }
 
   getRootPath() {

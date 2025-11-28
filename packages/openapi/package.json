@@ -1,0 +1,16 @@
+{
+  "name": "@karin-js/openapi",
+  "version": "0.0.1",
+  "module": "index.ts",
+  "type": "module",
+  "peerDependencies": {
+    "@karin-js/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "dependencies": {
+    "@asteasolutions/zod-to-openapi": "^8.1.0",
+    "zod": "^4.1.13"
+  }
+}

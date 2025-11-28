@@ -3,6 +3,7 @@ import { KarinFactory, Logger } from "@karin-js/core";
 import { HonoAdapter } from "@karin-js/platform-hono";
 import { ConfigPlugin } from "@karin-js/config";
 import { MongoosePlugin } from "@karin-js/mongoose";
+import { OpenApiPlugin } from "../../../packages/openapi";
 
 async function bootstrap() {
   const logger = new Logger("Bootstrap");
@@ -12,16 +13,9 @@ async function bootstrap() {
   });
 
   const config = new ConfigPlugin({
-    // 👇 Solución limpia: Usamos ?? o || para asegurar que nunca sea undefined
     load: () => ({
-      // Si PORT es undefined, pasamos "3000" a parseInt.
-      // O mejor aún, hacemos el parseInt seguro.
       port: parseInt(process.env.PORT || "3000", 10),
-
-      // Si es undefined, usa string vacío o un valor por defecto seguro
-      // Esto evita que TS se queje de 'string | undefined'
       mongoUri: process.env.MONGO_URI || "mongodb://localhost:27017/test",
-
       dbName: process.env.DB_NAME || "test_db",
     }),
   });
@@ -37,6 +31,8 @@ async function bootstrap() {
       },
     })
   );
+
+  app.use(new OpenApiPlugin({ path: "/docs" }));
 
   app.listen(config.get("port"), () => {
     logger.log(

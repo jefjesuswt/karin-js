@@ -3,7 +3,7 @@ import type { PipeTransform, ArgumentMetadata } from "../interfaces";
 import { BadRequestException } from "../exceptions/http.exception";
 
 export class ZodValidationPipe implements PipeTransform {
-  constructor(private schema: ZodType<any>) {}
+  constructor(public readonly schema: ZodType<any>) {}
 
   transform(value: any, metadata: ArgumentMetadata) {
     if (metadata.type === "custom") return value;

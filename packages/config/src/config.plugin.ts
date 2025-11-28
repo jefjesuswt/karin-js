@@ -59,11 +59,8 @@ export class ConfigPlugin<T = any> implements KarinPlugin {
     let configData: any;
 
     if (this.options.load) {
-      // ✅ OPCIÓN B: Carga Manual (Tu preferencia)
-      // Ejecutamos la función del usuario. Process.env ya tiene las variables cargadas.
       configData = this.options.load();
     } else if (this.options.schema) {
-      // ✅ OPCIÓN A: Zod
       const validation = this.options.schema.safeParse(process.env);
       if (!validation.success) {
         const zerr = validation.error as ZodError<any>;
@@ -87,7 +84,7 @@ export class ConfigPlugin<T = any> implements KarinPlugin {
 
     // Log discreto
     const keysCount = Object.keys(configData).length;
-    this.logger.log(`Loaded configuration (${keysCount} keys) ✅`);
+    this.logger.log(`Loaded configuration (${keysCount} keys)`);
   }
 
   public get<K extends keyof T>(key: K): T[K] {
