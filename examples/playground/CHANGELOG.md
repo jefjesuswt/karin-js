@@ -1,5 +1,14 @@
 # karin-playground
 
+## 0.0.3
+
+### Patch Changes
+
+- Updated dependencies
+  - @karin-js/core@0.5.1
+  - @karin-js/config@2.0.1
+  - @karin-js/mongoose@2.0.1
+
 ## 0.0.2
 
 ### Patch Changes
