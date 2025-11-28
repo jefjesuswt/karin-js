@@ -121,7 +121,7 @@ export class RouterExplorer {
   private logRoute(method: string, path: string, controllerName: string) {
     const methodColor = this.getMethodColor(method);
     const coloredMethod = pc.bold(methodColor(method.padEnd(7)));
-    const routeInfo = path.padEnd(30);
+    const routeInfo = path.padEnd(4);
     const separator = pc.dim("::");
     const controllerInfo = pc.cyan(controllerName);
     this.logger.log(
