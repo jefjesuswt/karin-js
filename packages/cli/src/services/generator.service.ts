@@ -1,18 +1,21 @@
 import { existsSync, mkdirSync, writeFileSync } from "fs";
 import { join, dirname, basename, relative } from "path";
 import pc from "picocolors";
-import { spinner, note } from "@clack/prompts";
-import { toKebabCase, removeSuffix, toPascalCase } from "../utils/formatting";
+import { spinner, note, confirm, isCancel, cancel } from "@clack/prompts";
+import { toKebabCase, removeSuffix } from "../utils/formatting";
 import { findSrcDir } from "../utils/paths";
 
-// Importa tus templates aquí (asegúrate de haberlos creado como vimos antes)
-import { generateControllerTemplate } from "../templates/controller.template";
-import { generateServiceTemplate } from "../templates/service.template";
-import { generateEntityTemplate } from "../templates/entity.template";
-import { generateGuardTemplate } from "../templates/guard.template";
-import { generateFilterTemplate } from "../templates/filter.template";
-import { generatePluginTemplate } from "../templates/plugin.template";
-import { generateDecoratorTemplate } from "../templates/decorator.template";
+import {
+  generateControllerTemplate,
+  generateServiceTemplate,
+  generateEntityTemplate,
+  generateGuardTemplate,
+  generateFilterTemplate,
+  generatePluginTemplate,
+  generateDecoratorTemplate,
+  generateCreateDtoTemplate, // Nuevos imports
+  generateUpdateDtoTemplate, // Nuevos imports
+} from "../templates";
 
 type GeneratorType =
   | "controller"
@@ -36,8 +39,6 @@ export class GeneratorService {
     try {
       const srcPath = findSrcDir(this.cwd);
 
-      // 1. Limpieza inteligente: "ProductsController" -> "Products"
-      // Solo si NO es un recurso (porque el recurso usa el nombre base)
       let cleanName = rawName;
       if (type !== "resource") {
         cleanName = removeSuffix(rawName, type);
@@ -45,7 +46,6 @@ export class GeneratorService {
 
       const featureName = basename(cleanName);
       const pathPrefix = dirname(cleanName) === "." ? "" : dirname(cleanName);
-      // Estructura: src/feature-name/
       const targetDir = join(srcPath, pathPrefix, toKebabCase(featureName));
 
       switch (type) {
@@ -90,7 +90,6 @@ export class GeneratorService {
           );
           break;
         case "plugin":
-          // Plugins suelen ir en src/plugins o la raíz de feature
           this.writeFile(
             targetDir,
             featureName,
@@ -115,7 +114,6 @@ export class GeneratorService {
 
       s.stop(`Successfully generated ${type} ${pc.cyan(featureName)}`);
 
-      // Resumen bonito
       if (this.createdFiles.length > 0) {
         const fileList = this.createdFiles
           .map((f) => `${pc.green("CREATE")} ${f}`)
@@ -130,29 +128,50 @@ export class GeneratorService {
   }
 
   private async generateResource(targetDir: string, name: string) {
-    // Limpiamos 'Resource' del nombre si el usuario lo puso
     const cleanName = removeSuffix(name, "resource");
 
-    this.writeFile(
-      targetDir,
-      cleanName,
-      "controller",
-      generateControllerTemplate
+    const shouldGenerateCrud = await confirm({
+      message: "Do you want to generate CRUD entry points?",
+      initialValue: true,
+    });
+
+    if (isCancel(shouldGenerateCrud)) {
+      cancel("Operation cancelled.");
+      process.exit(0);
+    }
+
+    this.writeFile(targetDir, cleanName, "controller", (n) =>
+      generateControllerTemplate(n, shouldGenerateCrud as boolean)
     );
-    this.writeFile(targetDir, cleanName, "service", generateServiceTemplate);
+
+    this.writeFile(targetDir, cleanName, "service", (n) =>
+      generateServiceTemplate(n, shouldGenerateCrud as boolean)
+    );
+
     this.writeFile(
       join(targetDir, "entities"),
       cleanName,
       "entity",
       generateEntityTemplate
     );
-    // DTOs opcional
+
+    const dtoPath = join(targetDir, "dtos");
+
     this.writeFile(
-      join(targetDir, "dtos"),
+      dtoPath,
       `create-${cleanName}`,
       "dto",
-      (n) => `export class Create${toPascalCase(n)}Dto {}`
+      generateCreateDtoTemplate
     );
+
+    if (shouldGenerateCrud) {
+      this.writeFile(
+        dtoPath,
+        `update-${cleanName}`,
+        "dto",
+        generateUpdateDtoTemplate
+      );
+    }
   }
 
   private writeFile(
