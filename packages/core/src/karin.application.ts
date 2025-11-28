@@ -21,7 +21,11 @@ export class KarinApplication {
   private shutdownHooksRegistered = false;
 
   constructor(private readonly adapter: IHttpAdapter, private root: string) {
-    this.root = root ?? process.cwd();
+    try {
+      this.root = root ?? process.cwd();
+    } catch {
+      this.root = "/";
+    }
   }
 
   public registerController(controller: Function) {
@@ -99,11 +103,7 @@ export class KarinApplication {
 
     this.init()
       .then(() => {
-        // 👇 Guardamos la referencia del servidor
-        // Asegúrate de que tus adaptadores (H3/Hono) retornen el resultado de Bun.serve()
         this.server = this.adapter.listen(port, host);
-
-        // 👇 Activamos los hooks de apagado
         this.registerShutdownHooks();
 
         if (callback) {
@@ -117,7 +117,7 @@ export class KarinApplication {
       })
       .catch((error) => {
         this.logger.error(`Failed to start application: ${error.message}`);
-        process.exit(1);
+        if (typeof process !== "undefined" && process.exit) process.exit(1);
       });
   }
 
@@ -128,12 +128,7 @@ export class KarinApplication {
     return this.globalGuards;
   }
 
-  // --- GRACEFUL SHUTDOWN LOGIC ---
-
-  /**
-   * Método usado internamente por el Router para rastrear peticiones en vuelo.
-   */
-  public trackRequest<T>(promise: Promise<T>): Promise<T> {
+  public async trackRequest<T>(promise: Promise<T>): Promise<T> {
     this.activeRequests.add(promise);
     return promise.finally(() => {
       this.activeRequests.delete(promise);
@@ -142,26 +137,26 @@ export class KarinApplication {
 
   private registerShutdownHooks() {
     if (this.shutdownHooksRegistered) return;
+
+    if (
+      typeof process === "undefined" ||
+      typeof process.on !== "function" ||
+      typeof process.once !== "function"
+    ) {
+      return;
+    }
+
     this.shutdownHooksRegistered = true;
 
     const signals: NodeJS.Signals[] = ["SIGTERM", "SIGINT"];
 
     signals.forEach((signal) => {
-      // Usamos .once en lugar de .on para ser más limpios
       process.once(signal, () => {
         this.logger.warn(`Received ${signal}, starting graceful shutdown...`);
         this.shutdown(signal);
       });
     });
 
-    signals.forEach((signal) => {
-      process.on(signal, () => {
-        this.logger.warn(`Received ${signal}, starting graceful shutdown...`);
-        this.shutdown(signal);
-      });
-    });
-
-    // Capturar errores no manejados para cerrar limpiamente también
     process.on("uncaughtException", (error) => {
       this.logger.error("Uncaught Exception", error.stack);
       this.shutdown("uncaughtException");
@@ -179,24 +174,20 @@ export class KarinApplication {
 
     this.logger.log(`Shutting down due to: ${signal}`);
 
-    // 1. Dejar de aceptar nuevas conexiones
     if (this.server && typeof this.server.stop === "function") {
-      this.server.stop(); // Bun server stop (cierra el socket pero mantiene activas las reqs)
+      this.server.stop();
       this.logger.log("HTTP Server stopped accepting connections");
     }
 
-    // 2. Esperar a que las peticiones activas terminen (Drenaje)
     if (this.activeRequests.size > 0) {
       this.logger.log(
         `Waiting for ${this.activeRequests.size} active requests to complete...`
       );
 
-      const timeoutMs = 10000; // 10 segundos máximo de espera
+      const timeoutMs = 10000;
       const timeout = new Promise((resolve) => setTimeout(resolve, timeoutMs));
-
       const allRequests = Promise.all(Array.from(this.activeRequests));
 
-      // Carrera: o terminan todas o se acaba el tiempo
       await Promise.race([allRequests, timeout]);
 
       if (this.activeRequests.size > 0) {
@@ -206,7 +197,6 @@ export class KarinApplication {
       }
     }
 
-    // 3. Destruir Plugins (Cerrar DB, Redis, etc.)
     this.logger.log("Cleaning up plugins...");
     for (const plugin of this.plugins) {
       if (plugin.onPluginDestroy) {
@@ -223,6 +213,6 @@ export class KarinApplication {
     }
 
     this.logger.log("Shutdown complete. Goodbye! 👋");
-    process.exit(0);
+    if (typeof process !== "undefined" && process.exit) process.exit(0);
   }
 }

@@ -1,7 +1,17 @@
-import { Controller, Get, Post, Put, Delete, Body, Param } from "@karin-js/core";
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Param,
+} from "@karin-js/core";
 import { DogsService } from "./dogs.service";
-import { CreateDogsDto } from "./dtos/create-dogs.dto";
-import { UpdateDogsDto } from "./dtos/update-dogs.dto";
+import type { CreateDogsDto } from "./dtos/create-dogs.dto";
+import type { UpdateDogsDto } from "./dtos/update-dogs.dto";
+// import { CreateDogsDto } from "./dtos/create-dogs.dto";
+// import { UpdateDogsDto } from "./dtos/update-dogs.dto";
 
 @Controller("/dogs")
 export class DogsController {

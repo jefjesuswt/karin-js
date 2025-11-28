@@ -1,5 +1,4 @@
 import "reflect-metadata";
-import { Glob } from "bun";
 import { join, dirname } from "path";
 import { existsSync } from "fs";
 import { CONTROLLER_METADATA } from "./decorators/constants";
@@ -10,7 +9,7 @@ import type { IHttpAdapter } from "./interfaces";
 import { RouterExplorer } from "./router/router-explorer";
 
 export interface KarinFactoryOptions {
-  scan?: string;
+  scan?: boolean | string;
   cwd?: string;
   controllers?: any[];
   strict?: boolean;
@@ -23,13 +22,16 @@ export class KarinFactory {
     adapter: IHttpAdapter,
     options: KarinFactoryOptions = {}
   ): Promise<KarinApplication> {
-    // 1. DETECCIÓN AUTOMÁTICA DE RAÍZ (La magia)
-    const root = options.cwd ?? KarinFactory.findProjectRoot();
+    // 1. Detección de raíz (Solo si vamos a escanear)
+    // En serverless 'cwd' puede fallar o no tener sentido, así que somos defensivos
+    const root =
+      options.cwd ?? (options.scan ? KarinFactory.findProjectRoot() : "/");
 
     const app = new KarinApplication(adapter, root);
     const explorer = new RouterExplorer(adapter);
 
-    // ... Carga manual de controllers (código existente) ...
+    // 2. Carga Manual (ESTRATEGIA SERVERLESS / MANUAL)
+    // Esta es la ruta crítica para Cloudflare Workers
     if (options.controllers && options.controllers.length > 0) {
       this.logger.info(
         `Registering ${options.controllers.length} manual controllers`
@@ -39,65 +41,108 @@ export class KarinFactory {
           explorer.explore(app, ControllerClass);
         }
       }
+
+      // 🚀 OPTIMIZACIÓN: Si hay controladores manuales y no se fuerza scan,
+      // retornamos inmediatamente. Esto evita cargar 'bun' o 'fs', permitiendo Tree-Shaking.
+      if (!options.scan) {
+        return app;
+      }
     }
 
-    // 2. ESCANEO INTELIGENTE RELATIVO AL ROOT
-    const shouldScan = options.scan || !options.controllers;
-
-    if (shouldScan) {
-      // Por defecto buscamos en src/ dentro del root detectado
-      const scanPath =
-        typeof options.scan === "string"
-          ? options.scan
-          : join("src", "**", "*.controller.ts");
-
-      // Glob escanea relativo al root
-      const glob = new Glob(scanPath);
-      this.logger.info(`Scanning files in: ${scanPath}...`);
-
-      for await (const file of glob.scan(root)) {
-        const absolutePath = join(root, file);
-        try {
-          const module = await import(absolutePath);
-          for (const key of Object.keys(module)) {
-            const CandidateClass = module[key];
-            if (
-              isConstructor(CandidateClass) &&
-              Reflect.hasMetadata(CONTROLLER_METADATA, CandidateClass)
-            ) {
-              explorer.explore(app, CandidateClass);
-            }
-          }
-        } catch (error: any) {
-          this.logger.error(`Error loading ${file}: ${error.message}`);
-          if (options.strict) throw error;
-        }
-      }
+    // 3. Escaneo Automático (ESTRATEGIA SERVIDOR TRADICIONAL)
+    // Por defecto es true, salvo que se haya desactivado explícitamente
+    if (options.scan !== false) {
+      await this.scanControllers(
+        root,
+        options.scan,
+        explorer,
+        app,
+        options.strict
+      );
     }
 
     return app;
   }
 
-  /**
-   * Encuentra la carpeta del proyecto (donde está el package.json)
-   * basándose en el archivo principal que se está ejecutando (main.ts).
-   */
-  private static findProjectRoot(): string {
-    // Si estamos en Bun, usamos el punto de entrada real
-    if (typeof Bun !== "undefined" && Bun.main) {
-      let currentDir = dirname(Bun.main);
+  private static async scanControllers(
+    root: string,
+    scanOption: boolean | string | undefined,
+    explorer: RouterExplorer,
+    app: KarinApplication,
+    strict?: boolean
+  ) {
+    const scanPath =
+      typeof scanOption === "string"
+        ? scanOption
+        : join("src", "**", "*.controller.ts");
 
-      // Subimos niveles hasta encontrar package.json
-      while (currentDir !== "/" && currentDir !== ".") {
-        if (existsSync(join(currentDir, "package.json"))) {
-          return currentDir;
+    this.logger.info(`Scanning files in: ${scanPath}...`);
+
+    try {
+      // ⚠️ DYNAMIC IMPORT: Vital para compatibilidad
+      // Solo cargamos 'bun' si el runtime lo soporta.
+      if (typeof Bun !== "undefined") {
+        const { Glob } = await import("bun");
+        const globScanner = new Glob(scanPath);
+
+        for await (const file of globScanner.scan(root)) {
+          const absolutePath = join(root, file);
+          await this.loadModule(absolutePath, explorer, app, strict);
         }
-        const parent = dirname(currentDir);
-        if (parent === currentDir) break;
-        currentDir = parent;
+      } else {
+        // Fallback futuro para Node.js (glob de npm)
+        this.logger.warn(
+          "Auto-scan is currently optimized for Bun runtime. Skipping scan."
+        );
       }
-      return dirname(Bun.main); // Fallback al dir del script
+    } catch (e: any) {
+      // En entornos restringidos (Edge), esto captura el error y permite seguir
+      this.logger.warn(
+        `File scanning skipped/failed (likely Serverless environment): ${e.message}`
+      );
     }
-    return process.cwd(); // Fallback para Node o casos raros
+  }
+
+  private static async loadModule(
+    path: string,
+    explorer: RouterExplorer,
+    app: KarinApplication,
+    strict?: boolean
+  ) {
+    try {
+      const module = await import(path);
+      for (const key of Object.keys(module)) {
+        const CandidateClass = module[key];
+        if (
+          isConstructor(CandidateClass) &&
+          Reflect.hasMetadata(CONTROLLER_METADATA, CandidateClass)
+        ) {
+          explorer.explore(app, CandidateClass);
+        }
+      }
+    } catch (error: any) {
+      this.logger.error(`Error loading ${path}: ${error.message}`);
+      if (strict) throw error;
+    }
+  }
+
+  private static findProjectRoot(): string {
+    try {
+      if (typeof Bun !== "undefined" && Bun.main) {
+        let currentDir = dirname(Bun.main);
+        while (currentDir !== "/" && currentDir !== ".") {
+          if (existsSync(join(currentDir, "package.json"))) {
+            return currentDir;
+          }
+          const parent = dirname(currentDir);
+          if (parent === currentDir) break;
+          currentDir = parent;
+        }
+        return dirname(Bun.main);
+      }
+      return process.cwd();
+    } catch {
+      return "/"; // Fallback seguro para entornos sin acceso a process/fs
+    }
   }
 }

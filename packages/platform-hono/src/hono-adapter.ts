@@ -12,6 +12,10 @@ export class HonoAdapter implements IHttpAdapter<Context, Request, Context> {
     this.app = new Hono();
   }
 
+  public get fetch() {
+    return this.app.fetch;
+  }
+
   private normalizeResponse(handler: (ctx: Context) => any) {
     return async (c: Context) => {
       const result = await handler(c);
@@ -50,8 +54,6 @@ export class HonoAdapter implements IHttpAdapter<Context, Request, Context> {
     this.app.delete(path, this.normalizeResponse(handler));
   }
 
-  // --- Server Start ---
-
   listen(port: number, host?: string) {
     this.server = Bun.serve({
       port,
@@ -68,18 +70,14 @@ export class HonoAdapter implements IHttpAdapter<Context, Request, Context> {
       this.logger.log("Hono Server stopped");
     }
   }
-  // --- Configuración ---
 
   enableCors(options?: any) {
     this.app.use("*", cors(options));
   }
 
-  // --- Abstracciones (El puente con Karin Core) ---
-
   async readBody(c: Context) {
     const contentType = c.req.header("Content-Type") || "";
 
-    // Detección inteligente del tipo de cuerpo
     if (contentType.includes("application/json")) {
       return c.req.json();
     }
@@ -93,7 +91,6 @@ export class HonoAdapter implements IHttpAdapter<Context, Request, Context> {
       return c.req.text();
     }
 
-    // Fallback a JSON o intentar parsear si no hay header explícito pero tiene contenido
     try {
       return await c.req.json();
     } catch {
@@ -102,25 +99,22 @@ export class HonoAdapter implements IHttpAdapter<Context, Request, Context> {
   }
 
   getQuery(c: Context) {
-    return c.req.query(); // Retorna Record<string, string>
+    return c.req.query();
   }
 
   getParams(c: Context) {
-    return c.req.param(); // Retorna Record<string, string>
+    return c.req.param();
   }
 
   getHeaders(c: Context) {
-    return c.req.header(); // Retorna Record<string, string>
+    return c.req.header();
   }
 
   getRequest(c: Context): Request {
-    // Hono expone el Request estándar en .raw
     return c.req.raw;
   }
 
   getResponse(c: Context): Context {
-    // En Hono, la respuesta se construye al final, pero usamos el contexto
-    // para configurar headers intermedios si es necesario (ej. c.header())
     return c;
   }
 

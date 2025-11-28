@@ -1,7 +1,7 @@
 import { Schema, Prop } from "@karin-js/mongoose";
 
-@Schema("Fox")
-export class Fox {
+@Schema("Foxes")
+export class Foxes {
   @Prop({ required: true, index: true })
   name: string;
 

@@ -4,11 +4,12 @@ import { HonoAdapter } from "@karin-js/platform-hono";
 import { ConfigPlugin } from "@karin-js/config";
 import { MongoosePlugin } from "@karin-js/mongoose";
 import { OpenApiPlugin } from "../../../packages/openapi";
+import { H3Adapter } from "../../../packages/platform-h3";
 
 async function bootstrap() {
   const logger = new Logger("Bootstrap");
 
-  const app = await KarinFactory.create(new HonoAdapter(), {
+  const app = await KarinFactory.create(new H3Adapter(), {
     scan: "./src/**/*.ts",
   });
 

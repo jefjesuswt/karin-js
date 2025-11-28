@@ -22,7 +22,13 @@ export class BaseExceptionFilter implements ExceptionFilter {
     } else if (exception instanceof Error) {
       this.logger.error(exception.message, exception.stack);
 
-      if (process.env.NODE_ENV !== "production") {
+      // 🛡️ GUARD: Verificamos si 'process' existe antes de acceder
+      const isProduction =
+        typeof process !== "undefined" &&
+        process.env &&
+        process.env.NODE_ENV === "production";
+
+      if (!isProduction) {
         body.details = exception.message;
       }
     }

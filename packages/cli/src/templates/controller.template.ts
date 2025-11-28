@@ -8,8 +8,8 @@ export function generateControllerTemplate(name: string, withCrud = false) {
   if (withCrud) {
     return `import { Controller, Get, Post, Put, Delete, Body, Param } from "@karin-js/core";
 import { ${className}Service } from "./${routeName}.service";
-import { Create${className}Dto } from "./dtos/create-${routeName}.dto";
-import { Update${className}Dto } from "./dtos/update-${routeName}.dto";
+import { type Create${className}Dto } from "./dtos/create-${routeName}.dto";
+import { type Update${className}Dto } from "./dtos/update-${routeName}.dto";
 
 @Controller("/${routeName}")
 export class ${className}Controller {

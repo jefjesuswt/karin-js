@@ -1,4 +1,3 @@
-// 👇 Agregamos BadRequestException
 import { Logger, type IHttpAdapter, BadRequestException } from "@karin-js/core";
 import {
   H3,
@@ -6,7 +5,6 @@ import {
   readBody,
   getQuery,
   getRouterParams,
-  getRequestHeaders,
   type H3Event,
   setResponseHeader,
 } from "h3";
@@ -19,6 +17,10 @@ export class H3Adapter implements IHttpAdapter<H3Event> {
 
   constructor() {
     this.app = new H3();
+  }
+
+  public get fetch() {
+    return this.app.fetch;
   }
 
   get(path: string, handler: (ctx: H3Event) => void) {
@@ -74,7 +76,14 @@ export class H3Adapter implements IHttpAdapter<H3Event> {
 
   getHeaders(ctx: H3Event) {
     if (!ctx.req || !ctx.req.headers) return {};
-    return Object.fromEntries(ctx.req.headers.entries());
+    const headers: Record<string, any> = {};
+
+    if (ctx.req.headers instanceof Headers) {
+      ctx.req.headers.forEach((v, k) => (headers[k] = v));
+    } else {
+      Object.assign(headers, ctx.req.headers);
+    }
+    return headers;
   }
 
   getRequest(ctx: H3Event) {
@@ -90,14 +99,12 @@ export class H3Adapter implements IHttpAdapter<H3Event> {
   }
 
   listen(port: number, host?: string) {
-    const h3App = this.app;
+    const fetchHandler = this.app.fetch;
 
     this.server = Bun.serve({
       port,
       hostname: host,
-      async fetch(req) {
-        return h3App.fetch(req);
-      },
+      fetch: fetchHandler,
     });
 
     return this.server;

@@ -9,7 +9,6 @@ export interface IHttpAdapter<
   put(path: string, handler: (ctx: TContext) => void): void;
   delete(path: string, handler: (ctx: TContext) => void): void;
   patch(path: string, handler: (ctx: TContext) => void): void;
-  listen(port: number, host?: string): void;
 
   enableCors?(options?: any): void;
 

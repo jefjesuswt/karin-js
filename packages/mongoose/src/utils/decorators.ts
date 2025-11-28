@@ -45,7 +45,6 @@ export function Schema(name?: string) {
 }
 
 export function InjectModel(modelName: string) {
-  // Inyectamos usando el token que el plugin genera (MONGO_MODEL_NOMBRE)
   return inject(`MONGO_MODEL_${modelName.toUpperCase()}`);
 }
 

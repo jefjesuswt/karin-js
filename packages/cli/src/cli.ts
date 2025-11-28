@@ -47,17 +47,67 @@ cli
       name = namePrompt;
     }
 
-    const templateType = await select({
-      message: "Pick a project type.",
+    // 1. Selector de Entorno (Environment)
+    const environment = await select({
+      message: "Where will this project run?",
       options: [
-        { value: "h3", label: "High Performance (H3)", hint: "Recommended" },
-        { value: "hono", label: "Edge / Serverless (Hono)" },
+        {
+          value: "server",
+          label: "Traditional Server (Bun/Node)",
+          hint: "Long running process",
+        },
+        {
+          value: "serverless",
+          label: "Serverless / Edge",
+          hint: "Cloudflare Workers, Deno Deploy, Vercel",
+        },
       ],
     });
 
-    if (isCancel(templateType)) {
+    if (isCancel(environment)) {
       cancel("Operation cancelled.");
       process.exit(0);
+    }
+
+    let templateSuffix = "";
+
+    // 2. Selector de Framework según entorno
+    if (environment === "serverless") {
+      const fw = await select({
+        message: "Select an Edge-optimized framework:",
+        options: [
+          {
+            value: "hono",
+            label: "Hono",
+            hint: "Best compatibility for Cloudflare/Deno",
+          },
+        ],
+      });
+
+      if (isCancel(fw)) {
+        cancel("Operation cancelled.");
+        process.exit(0);
+      }
+      templateSuffix = `serverless-${fw}`; // ej: serverless-hono
+    } else {
+      // Entorno Server
+      const fw = await select({
+        message: "Select a framework adapter:",
+        options: [
+          {
+            value: "h3",
+            label: "H3",
+            hint: "High Performance (Recommended)",
+          },
+          { value: "hono", label: "Hono", hint: "Web Standards based" },
+        ],
+      });
+
+      if (isCancel(fw)) {
+        cancel("Operation cancelled.");
+        process.exit(0);
+      }
+      templateSuffix = fw as string; // ej: h3 o hono
     }
 
     const initGit = await confirm({
@@ -84,7 +134,7 @@ cli
     const targetDir = join(process.cwd(), name);
 
     try {
-      const templateSource = `github:${TEMPLATE_OWNER}/karin-template-${templateType}`;
+      const templateSource = `github:${TEMPLATE_OWNER}/karin-template-${templateSuffix}`;
 
       await downloadTemplate(templateSource, {
         dir: targetDir,
@@ -126,7 +176,9 @@ cli
       s.stop("❌ Failed to create project");
       console.error(pc.red(error.message));
       if (error.message.includes("404")) {
-        console.log(pc.yellow(`\nTip: Template '${templateType}' not found.`));
+        console.log(
+          pc.yellow(`\nTip: Template '${templateSuffix}' not found on GitHub.`)
+        );
       }
       process.exit(1);
     }

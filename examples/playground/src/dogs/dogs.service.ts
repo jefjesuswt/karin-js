@@ -1,6 +1,6 @@
 import { Service } from "@karin-js/core";
-import { CreateDogsDto } from "./dtos/create-dogs.dto";
-import { UpdateDogsDto } from "./dtos/update-dogs.dto";
+import { type CreateDogsDto } from "./dtos/create-dogs.dto";
+import { type UpdateDogsDto } from "./dtos/update-dogs.dto";
 
 @Service()
 export class DogsService {
