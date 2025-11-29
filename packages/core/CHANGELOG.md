@@ -1,5 +1,11 @@
 # @karin-js/core
 
+## 0.6.3
+
+### Patch Changes
+
+- d75962d: minor optimizations
+
 ## 0.6.2
 
 ### Patch Changes
