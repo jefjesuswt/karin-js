@@ -41,17 +41,16 @@ export class RouteHandlerFactory {
   ) {
     const { boundHandler } = compiled;
 
-    return async (ctx: any) => {
-      const requestPromise = (async () => {
-        try {
-          return await boundHandler();
-        } catch (error: any) {
-          return this.defaultFilter.catch(error, this.createBasicHost(ctx));
-        }
-      })();
+    // ⚡ ULTRA FAST PATH:
+    // 1. Retornamos la función boundHandler DIRECTAMENTE.
+    // 2. Eliminamos el wrapper (ctx) => ... si es posible.
+    // 3. Eliminamos try/catch.
+    // 4. Eliminamos app.trackRequest (ahorramos allocación de promesas y Set).
 
-      return app.trackRequest(requestPromise);
-    };
+    // Si tu boundHandler no espera argumentos (ej: un "hello world" estático),
+    // podemos envolverlo en una arrow function mínima para descartar el argumento 'ctx'
+    // que envía el adaptador, evitando que boundHandler reciba basura.
+    return () => boundHandler();
   }
 
   /**

@@ -1,0 +1,11 @@
+{
+  "name": "karin-benchmark",
+  "version": "0.6.1",
+  "private": true,
+  "dependencies": {
+    "@karin-js/core": "workspace:*",
+    "@karin-js/platform-hono": "workspace:*",
+    "@karin-js/config": "workspace:*",
+    "@karin-js/mongoose": "workspace:*"
+  }
+}

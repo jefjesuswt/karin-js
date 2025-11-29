@@ -24,23 +24,23 @@ export class H3Adapter implements IHttpAdapter<H3Event> {
   }
 
   get(path: string, handler: (ctx: H3Event) => void) {
-    this.app.get(path, (event) => handler(event));
+    this.app.get(path, handler);
   }
 
   post(path: string, handler: (ctx: H3Event) => void) {
-    this.app.post(path, (event) => handler(event));
+    this.app.post(path, handler);
   }
 
   put(path: string, handler: (ctx: H3Event) => void) {
-    this.app.put(path, (event) => handler(event));
+    this.app.put(path, handler);
   }
 
   patch(path: string, handler: (ctx: H3Event) => void) {
-    this.app.patch(path, (event) => handler(event));
+    this.app.patch(path, handler);
   }
 
   delete(path: string, handler: (ctx: H3Event) => void) {
-    this.app.delete(path, (event) => handler(event));
+    this.app.delete(path, handler);
   }
 
   use(middleware: Function) {
@@ -104,7 +104,7 @@ export class H3Adapter implements IHttpAdapter<H3Event> {
   }
 
   listen(port: number, host?: string) {
-    const fetchHandler = this.app.fetch;
+    const fetchHandler = this.app.fetch.bind(this.app);
 
     this.server = Bun.serve({
       port,
