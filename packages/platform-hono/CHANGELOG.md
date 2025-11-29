@@ -1,5 +1,13 @@
 # @karin-js/platform-hono
 
+## 0.3.7
+
+### Patch Changes
+
+- 73b07b4: dependencies fixed
+- Updated dependencies [73b07b4]
+  - @karin-js/core@0.5.5
+
 ## 0.3.6
 
 ### Patch Changes
