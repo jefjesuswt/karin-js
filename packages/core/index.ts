@@ -19,8 +19,11 @@ export {
 } from "./src/router/metadata-scanner";
 
 export { DICache } from "./src/router/di-cache";
-export { MetadataCache, type CompiledRouteMetadata } from "./src/router/metadata-cache";
+export {
+  MetadataCache,
+  type CompiledRouteMetadata,
+} from "./src/router/metadata-cache";
 
 export { injectable, inject, singleton, container, delay } from "tsyringe";
 
-export const VERSION = "0.6.0";
+export const VERSION = "0.7.2";

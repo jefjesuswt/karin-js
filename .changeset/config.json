@@ -2,7 +2,8 @@
   "$schema": "https://unpkg.com/@changesets/config@3.1.1/schema.json",
   "changelog": "@changesets/cli/changelog",
   "commit": false,
-  "fixed": [
+  "fixed": [],
+  "linked": [
     [
       "@karin-js/core",
       "@karin-js/config",
@@ -14,7 +15,6 @@
       "@karin-js/cli"
     ]
   ],
-  "linked": [],
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",

@@ -8,11 +8,12 @@
 
 Karin-JS is a personal learning project exploring modern backend patterns in the Bun ecosystem. It draws inspiration from established frameworks like NestJS while experimenting with a module-less architecture optimized for Bun's performance characteristics.
 
-## ⚠️ Project Status: Alpha (v0.5.0)
+## ⚠️ Project Status: Alpha (v0.7.2)
 
 This is an **experimental learning project** and a work in progress. While functional, it's not yet battle-tested for production use.
 
 **What works:**
+
 - ✅ Decorator-based routing (`@Controller`, `@Get`, `@Post`, etc.)
 - ✅ Dependency Injection with TypeScript decorators
 - ✅ Guards, Pipes, Interceptors, and Exception Filters
@@ -23,18 +24,21 @@ This is an **experimental learning project** and a work in progress. While funct
 - ✅ Custom decorators and parameter extractors
 
 **Known limitations:**
+
 - ⚠️ Request-scoped DI not fully implemented
 - ⚠️ Limited production testing
 - ⚠️ No WebSockets or GraphQL support (yet)
 - ⚠️ Documentation is evolving
 
 **Good for:**
+
 - Learning TypeScript decorators and metadata reflection
 - Prototyping and side projects
 - Exploring Bun's performance capabilities
 - Small to medium APIs
 
 **Not recommended for:**
+
 - Mission-critical production systems
 - Large enterprise applications (consider [NestJS](https://nestjs.com/))
 - Projects requiring extensive ecosystem support
@@ -74,11 +78,8 @@ Automatically discover controllers by scanning files:
 
 ```typescript
 await KarinFactory.create(new HonoAdapter(), {
-  scan: "./src/**/*.ts",  // Auto-discover controllers
-  plugins: [
-    new ConfigPlugin(),
-    new MongoosePlugin({ uri: "..." }),
-  ],
+  scan: "./src/**/*.ts", // Auto-discover controllers
+  plugins: [new ConfigPlugin(), new MongoosePlugin({ uri: "..." })],
 });
 ```
 
@@ -91,11 +92,11 @@ import { DogsController } from "./dogs/dogs.controller";
 import { Dogs } from "./dogs/entities/dogs.entity";
 
 await KarinFactory.create(new HonoAdapter(), {
-  controllers: [DogsController, FoxesController],  // Manual registration
+  controllers: [DogsController, FoxesController], // Manual registration
   plugins: [
     new MongoosePlugin({
       uri: "...",
-      models: [Dogs, Foxes],  // Explicit models 
+      models: [Dogs, Foxes], // Explicit models
     }),
   ],
 });
@@ -104,12 +105,14 @@ await KarinFactory.create(new HonoAdapter(), {
 **Benefits of each approach:**
 
 **File-Based Discovery:**
+
 - ✅ Less boilerplate
 - ✅ Faster prototyping
 - ✅ Automatic updates when adding controllers
 - ❌ Requires file system access (not ideal for serverless)
 
 **Manual Registration:**
+
 - ✅ Better for serverless/edge deployments
 - ✅ Explicit dependencies (better for tree-shaking)
 - ✅ No file system scanning overhead
@@ -118,6 +121,7 @@ await KarinFactory.create(new HonoAdapter(), {
 ### When to Use Karin-JS
 
 **Consider Karin-JS if you:**
+
 - Want to learn how decorator-based frameworks work
 - Are building a small to medium API (< 50 endpoints)
 - Value simplicity over extensive features
@@ -125,6 +129,7 @@ await KarinFactory.create(new HonoAdapter(), {
 - Are prototyping or building side projects
 
 **Choose NestJS (or similar) if you:**
+
 - Need a proven, production-ready framework
 - Are building a large, complex application
 - Require extensive ecosystem support (GraphQL, microservices, etc.)
@@ -426,29 +431,29 @@ Performance benchmarks comparing Karin-JS with other popular frameworks. All tes
 
 ### Results (OHA - 30s test)
 
-| Framework | Requests/sec | Avg Latency | P99 Latency | Success Rate |
-|-----------|--------------|-------------|-------------|--------------|
-| **Go Fiber** | 418,106 | 0.24ms | 1.25ms | 100% |
-| **Rust Actix** | 388,111 | 0.26ms | 1.74ms | 100% |
-| **Elysia (Bun)** | 312,951 | 0.32ms | 0.88ms | 100% |
-| **Spring Boot (Java)** | 118,177 | 0.84ms | 10.94ms | 100% |
-| **KarinJS + @Fast** | 114,434 | 0.87ms | 1.59ms | 100% |
-| **Hono (Bun)** | 101,830 | 0.98ms | 1.75ms | 100% |
-| **KarinJS (Standard)** | 92,739 | 1.08ms | 2.34ms | 100% |
-| **NestJS + Fastify** | 38,769 | 2.58ms | 2.89ms | 100% |
+| Framework              | Requests/sec | Avg Latency | P99 Latency | Success Rate |
+| ---------------------- | ------------ | ----------- | ----------- | ------------ |
+| **Go Fiber**           | 418,106      | 0.24ms      | 1.25ms      | 100%         |
+| **Rust Actix**         | 388,111      | 0.26ms      | 1.74ms      | 100%         |
+| **Elysia (Bun)**       | 312,951      | 0.32ms      | 0.88ms      | 100%         |
+| **Spring Boot (Java)** | 118,177      | 0.84ms      | 10.94ms     | 100%         |
+| **KarinJS + @Fast**    | 114,434      | 0.87ms      | 1.59ms      | 100%         |
+| **Hono (Bun)**         | 101,830      | 0.98ms      | 1.75ms      | 100%         |
+| **KarinJS (Standard)** | 92,739       | 1.08ms      | 2.34ms      | 100%         |
+| **NestJS + Fastify**   | 38,769       | 2.58ms      | 2.89ms      | 100%         |
 
 ### Results (WRK - 30s test)
 
-| Framework | Requests/sec | Avg Latency | Transfer/sec |
-|-----------|--------------|-------------|--------------|
-| **Rust Actix** | 511,469 | 0.27ms | 89.26 MB/s |
-| **Go Fiber** | 494,988 | 0.31ms | 86.39 MB/s |
-| **Elysia (Bun)** | 392,683 | 0.25ms | 68.53 MB/s |
-| **Spring Boot (Java)** | 136,994 | 1.81ms | 26.15 MB/s |
-| **KarinJS + @Fast** | 109,302 | 0.88ms | 20.53 MB/s |
-| **KarinJS (Standard)** | 103,444 | 0.93ms | 19.43 MB/s |
-| **Hono (Bun)** | 96,961 | 0.99ms | 16.92 MB/s |
-| **NestJS + Fastify** | 34,454 | 2.85ms | 8.08 MB/s |
+| Framework              | Requests/sec | Avg Latency | Transfer/sec |
+| ---------------------- | ------------ | ----------- | ------------ |
+| **Rust Actix**         | 511,469      | 0.27ms      | 89.26 MB/s   |
+| **Go Fiber**           | 494,988      | 0.31ms      | 86.39 MB/s   |
+| **Elysia (Bun)**       | 392,683      | 0.25ms      | 68.53 MB/s   |
+| **Spring Boot (Java)** | 136,994      | 1.81ms      | 26.15 MB/s   |
+| **KarinJS + @Fast**    | 109,302      | 0.88ms      | 20.53 MB/s   |
+| **KarinJS (Standard)** | 103,444      | 0.93ms      | 19.43 MB/s   |
+| **Hono (Bun)**         | 96,961       | 0.99ms      | 16.92 MB/s   |
+| **NestJS + Fastify**   | 34,454       | 2.85ms      | 8.08 MB/s    |
 
 ### Key Takeaways
 
@@ -462,8 +467,6 @@ Performance benchmarks comparing Karin-JS with other popular frameworks. All tes
 - ⚠️ **Framework choice should not be based solely on benchmarks** - Consider ecosystem, maturity, team experience, and project requirements
 - ⚠️ **NestJS uses Fastify adapter** - Results shown are with Fastify, not Express (which would be slower)
 - ⚠️ **Your mileage may vary** - Always benchmark your own use case
-
-
 
 ---
 

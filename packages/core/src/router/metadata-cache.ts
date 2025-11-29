@@ -54,16 +54,21 @@ export class MetadataCache {
     }
 
     // ✅ 1. Pre-resolve controller (Singleton)
-    const controllerInstance = DICache.resolve(controllerClass);
-    const boundHandler = controllerInstance[methodName].bind(controllerInstance);
+    const controllerInstance = DICache.resolve(controllerClass) as any;
+    const boundHandler =
+      controllerInstance[methodName].bind(controllerInstance);
 
     // ✅ 2. Pre-resolve guards, pipes, interceptors
     const guards = this.resolveInstances<CanActivate>(rawMetadata.guards);
     const pipes = this.resolveInstances<PipeTransform>(rawMetadata.pipes);
-    const interceptors = this.resolveInstances<KarinInterceptor>(rawMetadata.interceptors);
+    const interceptors = this.resolveInstances<KarinInterceptor>(
+      rawMetadata.interceptors
+    );
 
     // ✅ 3. OPTIMIZACIÓN: Pre-resolve filters CON metadata
-    const filterInstances = this.resolveInstances<ExceptionFilter>(rawMetadata.filters);
+    const filterInstances = this.resolveInstances<ExceptionFilter>(
+      rawMetadata.filters
+    );
     const filters: ResolvedFilter[] = filterInstances.map((instance) => {
       const constructor = Object.getPrototypeOf(instance).constructor;
       const catchMetatypes =
