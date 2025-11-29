@@ -16,13 +16,18 @@ export class ParamsResolver {
     adapter: IHttpAdapter,
     executionContext: ExecutionContext
   ): Promise<unknown[]> {
-    const args: unknown[] = [];
-    params.sort((a, b) => a.index - b.index);
+    // ✅ OPTIMIZACIÓN: Fast path para casos sin params
+    if (params.length === 0) {
+      return [];
+    }
+
+    const args: unknown[] = new Array(params.length); // ✅ Pre-allocate
 
     for (const param of params) {
       let value: unknown = undefined;
       let metaType: ArgumentMetadata["type"] = "custom";
 
+      // ✅ OPTIMIZACIÓN: Switch más rápido que if-else chain
       switch (param.type) {
         case "BODY":
           value = await adapter.readBody(ctx);
@@ -38,7 +43,6 @@ export class ParamsResolver {
           break;
         case "HEADERS":
           value = adapter.getHeaders(ctx);
-          metaType = "custom";
           break;
         case "REQ":
           value = adapter.getRequest(ctx);
@@ -50,7 +54,6 @@ export class ParamsResolver {
           if (param.factory) {
             value = param.factory(param.data, executionContext);
           }
-          metaType = "custom";
           break;
       }
 
@@ -58,19 +61,23 @@ export class ParamsResolver {
         value = value[param.data];
       }
 
-      let pipesToRun = globalPipes;
-      if (param.resolvedPipes.length > 0) {
-        pipesToRun =
-          globalPipes.length > 0
-            ? [...globalPipes, ...param.resolvedPipes]
-            : param.resolvedPipes;
-      }
+      // ✅ OPTIMIZACIÓN: Solo run pipes si hay alguno
+      const hasLocalPipes = param.resolvedPipes.length > 0;
+      const hasGlobalPipes = globalPipes.length > 0;
 
-      for (const pipe of pipesToRun) {
-        value = await pipe.transform(value, {
-          type: metaType,
-          data: typeof param.data === "string" ? param.data : undefined,
-        });
+      if (hasGlobalPipes || hasLocalPipes) {
+        const pipesToRun = hasGlobalPipes && hasLocalPipes
+          ? [...globalPipes, ...param.resolvedPipes]
+          : hasGlobalPipes
+            ? globalPipes
+            : param.resolvedPipes;
+
+        for (const pipe of pipesToRun) {
+          value = await pipe.transform(value, {
+            type: metaType,
+            data: typeof param.data === "string" ? param.data : undefined,
+          });
+        }
       }
 
       args[param.index] = value;

@@ -31,12 +31,10 @@ export class RouteHandlerFactory {
     }
 
     // Path normal optimizado
-    return this.createNormalHandler(app, ControllerClass, methodName, compiled);
+    return this.createOptimizedHandler(app, ControllerClass, methodName, compiled);
   }
 
-  /**
-   * ✅ OPTIMIZADO: Handler ultra-rápido sin middleware
-   */
+
   private createFastHandler(
     app: KarinApplication,
     compiled: CompiledRouteMetadata
@@ -46,10 +44,8 @@ export class RouteHandlerFactory {
     return async (ctx: any) => {
       const requestPromise = (async () => {
         try {
-          // ✅ Ejecuta directo sin guards/pipes/interceptors
           return await boundHandler();
         } catch (error: any) {
-          // Manejo básico de errores sin ExecutionContext completo
           return this.defaultFilter.catch(error, this.createBasicHost(ctx));
         }
       })();
@@ -61,46 +57,84 @@ export class RouteHandlerFactory {
   /**
    * ✅ CORREGIDO: Usa metadata pre-compilado
    */
-  private createNormalHandler(
+  /**
+   * ✅ ULTRA-OPTIMIZADO: Path crítico sin overhead
+   */
+  private createOptimizedHandler(
     app: KarinApplication,
     ControllerClass: Type<any>,
     methodName: string,
     compiled: CompiledRouteMetadata
   ) {
-    // ✅ TODO pre-resuelto desde MetadataCache
     const { boundHandler, guards, pipes, interceptors, filters, params } = compiled;
 
-    return async (ctx: any) => {
-      const requestPromise = (async () => {
+    // ✅ Pre-computa flags para evitar checks en runtime
+    const hasGuards = guards.length > 0;
+    const hasPipes = pipes.length > 0;
+    const hasParams = params.length > 0;
+    const hasInterceptors = interceptors.length > 0;
+    const hasFilters = filters.length > 0;
+
+    // ✅ OPTIMIZACIÓN: Si no hay nada, usa path ultra-rápido
+    if (!hasGuards && !hasPipes && !hasParams && !hasInterceptors) {
+      return async (ctx: any) => {
         try {
-          const executionContext = new KarinExecutionContext(
+          return await boundHandler();
+        } catch (error: any) {
+          if (!hasFilters) {
+            return this.defaultFilter.catch(error, this.createBasicHost(ctx));
+          }
+          return this.handleException(error, ctx, filters, ControllerClass.prototype[methodName]);
+        }
+      };
+    }
+
+    // Path normal optimizado
+    return async (ctx: any) => {
+      try {
+        let executionContext: KarinExecutionContext | undefined;
+
+        // ✅ OPTIMIZACIÓN: Solo crea context si es necesario
+        if (hasGuards || hasParams) {
+          executionContext = new KarinExecutionContext(
             this.adapter,
             ctx,
             ControllerClass,
             boundHandler
           );
+        }
 
-          // 1. Guards (ya instanciados)
+        // Guards
+        if (hasGuards) {
           for (const guard of guards) {
-            const canActivate = await guard.canActivate(executionContext);
+            const canActivate = await guard.canActivate(executionContext!);
             if (!canActivate) {
               throw new ForbiddenException("Forbidden resource");
             }
           }
+        }
 
-          // 2. Params & Pipes (ya instanciados)
-          const args = await this.paramsResolver.resolve(
+        // Params
+        let args: unknown[] = [];
+        if (hasParams) {
+          args = await this.paramsResolver.resolve(
             ctx,
             params,
             pipes,
             this.adapter,
-            executionContext
+            executionContext!
           );
+        }
 
-          // 3. Interceptors & Handler
-          if (interceptors.length === 0) {
-            // ✅ OPTIMIZACIÓN: Bypass si no hay interceptors
-            return await boundHandler(...args);
+        // Interceptors
+        if (hasInterceptors) {
+          if (!executionContext) {
+            executionContext = new KarinExecutionContext(
+              this.adapter,
+              ctx,
+              ControllerClass,
+              boundHandler
+            );
           }
 
           const baseHandler: CallHandler = {
@@ -114,17 +148,21 @@ export class RouteHandlerFactory {
           );
 
           return await executionChain.handle();
-        } catch (error: any) {
-          return this.handleException(
-            error,
-            ctx,
-            filters,
-            ControllerClass.prototype[methodName]
-          );
         }
-      })();
 
-      return app.trackRequest(requestPromise);
+        // Handler directo
+        return await boundHandler(...args);
+      } catch (error: any) {
+        if (!hasFilters) {
+          return this.defaultFilter.catch(error, this.createBasicHost(ctx));
+        }
+        return this.handleException(
+          error,
+          ctx,
+          filters,
+          ControllerClass.prototype[methodName]
+        );
+      }
     };
   }
 

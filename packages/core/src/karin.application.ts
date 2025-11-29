@@ -21,12 +21,18 @@ export class KarinApplication {
   private isShuttingDown = false;
   private activeRequests = new Set<Promise<any>>();
   private shutdownHooksRegistered = false;
+  private trackingEnabled = false; // ✅ NUEVO: Flag para deshabilitar tracking
 
   constructor(private readonly adapter: IHttpAdapter, private root: string) {
     try {
       this.root = root ?? process.cwd();
     } catch {
       this.root = "/";
+    }
+
+    // ✅ OPTIMIZACIÓN: Solo habilita tracking si hay hooks de shutdown
+    if (typeof process !== "undefined" && typeof process.on === "function") {
+      this.trackingEnabled = true;
     }
   }
 
@@ -135,7 +141,14 @@ export class KarinApplication {
   public getGlobalGuards() {
     return this.globalGuards;
   }
+  /**
+   * ✅ OPTIMIZADO: Solo trackea si es necesario
+   */
   public async trackRequest<T>(promise: Promise<T>): Promise<T> {
+    if (!this.trackingEnabled || !this.isShuttingDown) {
+      return promise; // ✅ Fast path sin overhead
+    }
+
     this.activeRequests.add(promise);
     return promise.finally(() => {
       this.activeRequests.delete(promise);
