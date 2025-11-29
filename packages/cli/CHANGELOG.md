@@ -1,5 +1,11 @@
 # @karin-js/cli
 
+## 0.7.1
+
+### Patch Changes
+
+- 26ab21e: minor fixes on metadata cache
+
 ## 0.7.0
 
 ### Minor Changes

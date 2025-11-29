@@ -1,13 +1,13 @@
 {
   "name": "@karin-js/mongoose",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "module": "index.ts",
   "type": "module",
   "peerDependencies": {
     "mongoose": "^8.0.0"
   },
   "dependencies": {
-    "@karin-js/core": "^0.7.0",
+    "@karin-js/core": "^0.7.1",
     "mongoose": "^8.9.0"
   },
   "devDependencies": {
