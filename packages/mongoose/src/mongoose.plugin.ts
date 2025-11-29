@@ -11,10 +11,9 @@ import { SchemaFactory } from "./utils/schema.factory";
 export interface MongoosePluginOptions {
   uri: string;
   options?: ConnectOptions;
-  /**
-   * Lista explícita de modelos para entornos Serverless/Bundled.
-   * Evita que el Tree-Shaking elimine las entidades no referenciadas.
-   */
+
+  dbName?: string;
+
   models?: Function[];
 }
 
@@ -26,8 +25,6 @@ export class MongoosePlugin implements KarinPlugin {
   constructor(private readonly config: MongoosePluginOptions) {}
 
   install(app: KarinApplication) {
-    // FASE 0: Registro Manual (Vital para Serverless)
-    // Si el usuario pasa modelos explícitos, los aseguramos en el registro
     if (this.config.models && this.config.models.length > 0) {
       this.config.models.forEach((model) => {
         SCHEMAS_REGISTRY.add(model);
@@ -37,18 +34,24 @@ export class MongoosePlugin implements KarinPlugin {
       );
     }
 
-    // FASE 1: Construcción y Registro de Modelos en el DI
     this.registerModels();
   }
 
   async onPluginInit() {
-    // FASE 2: Conexión
     try {
       if (!this.config.uri) throw new Error("URI is required");
 
+      const connectionOptions: ConnectOptions = {
+        ...this.config.options,
+      };
+
+      if (this.config.dbName) {
+        connectionOptions.dbName = this.config.dbName;
+      }
+
       this.connection = await mongoose.connect(
         this.config.uri,
-        this.config.options
+        connectionOptions
       );
 
       container.registerInstance("MONGO_CONNECTION", this.connection);
@@ -68,7 +71,6 @@ export class MongoosePlugin implements KarinPlugin {
     }
 
     for (const ModelClass of SCHEMAS_REGISTRY) {
-      // 1. Validar que sea una clase decorada
       const meta = Reflect.getMetadata(SCHEMA_METADATA, ModelClass);
 
       if (!meta) {
@@ -79,16 +81,11 @@ export class MongoosePlugin implements KarinPlugin {
       }
 
       const modelName = meta.name || ModelClass.name;
-
-      // 2. Generar Schema
       const schema = SchemaFactory.createForClass(ModelClass as Function);
 
-      // 3. Crear instancia real de Mongoose
-      // mongoose.models verifica si ya existe para evitar errores de recompilación (HMR)
       const modelInstance =
         mongoose.models[modelName] || mongoose.model(modelName, schema);
 
-      // 4. Inyección de Dependencias
       const token = `MONGO_MODEL_${modelName.toUpperCase()}`;
       container.registerInstance(token, modelInstance);
 
