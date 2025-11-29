@@ -3,9 +3,6 @@
   "version": "1.0.4",
   "module": "index.ts",
   "type": "module",
-  "peerDependencies": {
-    "@karin-js/core": "workspace:*"
-  },
   "devDependencies": {
     "@types/bun": "latest"
   },

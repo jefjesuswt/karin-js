@@ -4,12 +4,9 @@
   "description": "Type-safe configuration management for KarinJS",
   "module": "index.ts",
   "type": "module",
-  "peerDependencies": {
-    "@karin-js/core": "workspace:*"
-  },
   "devDependencies": {
     "@types/bun": "latest",
-    "@karin-js/core": "workspace:*"
+    "@karin-js/core": "^0.5.4"
   },
   "dependencies": {
     "dotenv": "^17.2.3",

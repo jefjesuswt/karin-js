@@ -7,11 +7,10 @@
     "@types/bun": "latest"
   },
   "peerDependencies": {
-    "@karin-js/core": "workspace:*",
     "typescript": "^5"
   },
   "dependencies": {
-    "@karin-js/core": "workspace:*",
+    "@karin-js/core": "^0.5.4",
     "ioredis": "^5.8.2"
   }
 }
