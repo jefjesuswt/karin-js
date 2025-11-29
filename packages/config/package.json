@@ -1,12 +1,12 @@
 {
   "name": "@karin-js/config",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "description": "Type-safe configuration management for KarinJS",
   "module": "index.ts",
   "type": "module",
   "devDependencies": {
     "@types/bun": "latest",
-    "@karin-js/core": "^0.6.1"
+    "@karin-js/core": "^0.6.2"
   },
   "dependencies": {
     "dotenv": "^17.2.3",
