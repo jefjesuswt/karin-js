@@ -5,7 +5,16 @@ export class DICache {
   private static instances = new Map<any, any>();
   private static logger = new Logger("DICache");
 
-  static resolve<T>(token: InjectionToken<T>): T {
+  static resolve<T>(token: InjectionToken<T> | any): T {
+    // ✅ Si es una instancia (objeto), retornarla directamente
+    if (
+      typeof token !== "function" &&
+      typeof token !== "string" &&
+      typeof token !== "symbol"
+    ) {
+      return token;
+    }
+
     if (!this.instances.has(token)) {
       const instance = container.resolve(token);
       this.instances.set(token, instance);

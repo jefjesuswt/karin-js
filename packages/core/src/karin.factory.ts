@@ -12,6 +12,10 @@ export interface KarinFactoryOptions {
   cwd?: string;
   controllers?: any[];
   strict?: boolean;
+  plugins?: any[];
+  globalFilters?: any[];
+  globalGuards?: any[];
+  globalPipes?: any[];
 }
 
 export class KarinFactory {
@@ -33,6 +37,24 @@ export class KarinFactory {
 
     const app = new KarinApplication(adapter, root);
     const explorer = new RouterExplorer(adapter);
+
+    // 1.5. Registrar Plugins (ANTES del escaneo para DI)
+    if (options.plugins) {
+      for (const plugin of options.plugins) {
+        app.use(plugin);
+      }
+    }
+
+    // 1.6. Registrar Global Filters, Guards, Pipes (ANTES del escaneo)
+    if (options.globalFilters) {
+      app.useGlobalFilters(...options.globalFilters);
+    }
+    if (options.globalGuards) {
+      app.useGlobalGuards(...options.globalGuards);
+    }
+    if (options.globalPipes) {
+      app.useGlobalPipes(...options.globalPipes);
+    }
 
     // 2. Carga Manual (ESTRATEGIA SERVERLESS / MANUAL)
     if (options.controllers && options.controllers.length > 0) {

@@ -3,9 +3,10 @@
   "version": "0.6.2",
   "private": true,
   "dependencies": {
-    "@karin-js/core": "workspace:*",
-    "@karin-js/platform-hono": "workspace:*",
     "@karin-js/config": "workspace:*",
-    "@karin-js/mongoose": "workspace:*"
+    "@karin-js/core": "workspace:*",
+    "@karin-js/mongoose": "workspace:*",
+    "@karin-js/platform-hono": "workspace:*",
+    "hono": "^4.10.7"
   }
 }

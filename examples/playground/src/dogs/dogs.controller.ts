@@ -10,12 +10,11 @@ import {
 import { DogsService } from "./dogs.service";
 import type { CreateDogsDto } from "./dtos/create-dogs.dto";
 import type { UpdateDogsDto } from "./dtos/update-dogs.dto";
-// import { CreateDogsDto } from "./dtos/create-dogs.dto";
-// import { UpdateDogsDto } from "./dtos/update-dogs.dto";
+
 
 @Controller("/dogs")
 export class DogsController {
-  constructor(private readonly service: DogsService) {}
+  constructor(private readonly service: DogsService) { }
 
   @Post("/")
   create(@Body() body: CreateDogsDto) {

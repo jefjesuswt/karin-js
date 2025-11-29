@@ -38,6 +38,7 @@ describe("MongoosePlugin", () => {
     beforeEach(() => {
         appMock = {
             getRootPath: () => process.cwd(),
+            useGlobalFilters: mock(() => { }),
         } as any;
 
         // Clear registry
@@ -74,7 +75,7 @@ describe("MongoosePlugin", () => {
         await plugin.onPluginInit();
 
         expect(mongoose.connect).toHaveBeenCalled();
-        expect(mongoose.connect).toHaveBeenCalledWith("mongodb://localhost:27017/test", undefined);
+        expect(mongoose.connect).toHaveBeenCalledWith("mongodb://localhost:27017/test", {});
     });
 
     it("should throw error if uri is missing", async () => {

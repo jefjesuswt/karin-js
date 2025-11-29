@@ -2,7 +2,7 @@ import "reflect-metadata";
 import { describe, it, expect, mock } from "bun:test";
 import { ParamsResolver } from "../../src/router/param-resolver";
 import type { IHttpAdapter, ExecutionContext } from "../../src/interfaces";
-import type { RouteParamMetadata } from "../../src/decorators/params"; // Ajusta si el path es diferente
+import type { ResolvedParamMetadata } from "../../src/router/metadata-cache";
 
 describe("ParamsResolver", () => {
   const resolver = new ParamsResolver();
@@ -29,8 +29,8 @@ describe("ParamsResolver", () => {
   const ctx = {}; // Contexto nativo dummy
 
   it("should resolve @Body correctly", async () => {
-    const metadata: RouteParamMetadata[] = [
-      { index: 0, type: "BODY", data: undefined },
+    const metadata: ResolvedParamMetadata[] = [
+      { index: 0, type: "BODY", data: undefined, resolvedPipes: [] },
     ];
 
     // 👇 Pasamos mockExecutionContext como 5to argumento
@@ -47,8 +47,8 @@ describe("ParamsResolver", () => {
   });
 
   it("should resolve @Query('page') correctly", async () => {
-    const metadata: RouteParamMetadata[] = [
-      { index: 0, type: "QUERY", data: "page" },
+    const metadata: ResolvedParamMetadata[] = [
+      { index: 0, type: "QUERY", data: "page", resolvedPipes: [] },
     ];
 
     const args = await resolver.resolve(
@@ -64,9 +64,9 @@ describe("ParamsResolver", () => {
   });
 
   it("should resolve multiple parameters in the correct order", async () => {
-    const metadata: RouteParamMetadata[] = [
-      { index: 1, type: "BODY" },
-      { index: 0, type: "PARAM", data: "id" },
+    const metadata: ResolvedParamMetadata[] = [
+      { index: 1, type: "BODY", resolvedPipes: [] },
+      { index: 0, type: "PARAM", data: "id", resolvedPipes: [] },
     ];
 
     const args = await resolver.resolve(
@@ -89,12 +89,13 @@ describe("ParamsResolver", () => {
       return req.headers.get("Authorization"); // Debería devolver "Bearer token"
     });
 
-    const metadata: RouteParamMetadata[] = [
+    const metadata: ResolvedParamMetadata[] = [
       {
         index: 0,
         type: "CUSTOM",
         data: "some-data",
         factory: customFactory,
+        resolvedPipes: [],
       },
     ];
 

@@ -7,10 +7,11 @@ export interface ArgumentsHost {
   switchToHttp(): HttpArgumentsHost;
 }
 
-export interface HttpArgumentsHost extends ArgumentsHost {}
+export interface HttpArgumentsHost extends ArgumentsHost { }
 
 export interface ExecutionContext extends ArgumentsHost {
   getClass<T = any>(): Type<T>;
   getHandler(): Function;
   switchToHttp(): HttpArgumentsHost;
+  getPlatformContext<T = any>(): T;
 }

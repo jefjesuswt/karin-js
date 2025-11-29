@@ -94,3 +94,5 @@ export const Param = createNativeParamDecorator("PARAM");
 export const Headers = createNativeParamDecorator("HEADERS");
 export const Req = createNativeParamDecorator("REQ");
 export const Res = createNativeParamDecorator("RES");
+
+export const Ctx = createParamDecorator((data, ctx) => ctx);

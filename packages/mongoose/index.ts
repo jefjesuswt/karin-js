@@ -1,4 +1,5 @@
 export * from "./src/mongoose.plugin";
+export * from "./src/mongoose-exception.filter";
 export * from "./src/utils/decorators";
 
 export {

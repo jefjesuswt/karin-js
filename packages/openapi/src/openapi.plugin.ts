@@ -7,9 +7,9 @@ import { OpenApiBuilder } from "./openapi.builder";
 import { generateSwaggerHtml } from "./swagger-ui";
 
 export interface OpenApiPluginOptions {
-  path?: string; // ej: /docs
-  title?: string;
-  version?: string;
+  path?: string | (() => string); // ej: /docs
+  title?: string | (() => string);
+  version?: string | (() => string);
 }
 
 export class OpenApiPlugin implements KarinPlugin {
@@ -17,7 +17,7 @@ export class OpenApiPlugin implements KarinPlugin {
   private logger = new Logger("OpenAPI");
   private app!: KarinApplication;
 
-  constructor(private readonly options: OpenApiPluginOptions = {}) {}
+  constructor(private readonly options: OpenApiPluginOptions = {}) { }
 
   install(app: KarinApplication) {
     this.app = app;
@@ -36,12 +36,24 @@ export class OpenApiPlugin implements KarinPlugin {
     const builder = new OpenApiBuilder(this.app);
     const document = builder.build();
 
+    // ✅ Lazy resolution: permite usar ConfigService desde DI
+    const title = typeof this.options.title === "function"
+      ? this.options.title()
+      : this.options.title;
+
+    const version = typeof this.options.version === "function"
+      ? this.options.version()
+      : this.options.version;
+
+    const docPath = typeof this.options.path === "function"
+      ? this.options.path()
+      : (this.options.path || "/docs");
+
     // Personalización del documento
-    if (this.options.title) document.info.title = this.options.title;
-    if (this.options.version) document.info.version = this.options.version;
+    if (title) document.info.title = title;
+    if (version) document.info.version = version;
 
     // 3. Rutas
-    const docPath = this.options.path || "/docs";
     const jsonPath = `${docPath}/json`;
     const adapter = this.app.getHttpAdapter();
 

@@ -1,76 +1,91 @@
-# @karin-js/platform-hono 🦊
+# @karin-js/platform-hono
 
-The Hono platform adapter for Karin-JS, offering **broad compatibility** for Edge and Serverless environments (Cloudflare Workers, Deno Deploy, etc.).
-
-[![NPM Version](https://img.shields.io/npm/v/@karin-js/platform-hono)](https://www.npmjs.com/package/@karin-js/platform-hono)
-[![Bun Version](https://img.shields.io/badge/bun-%3E%3D1.2.10-lightgrey?logo=bun)](https://bun.sh/)
-[![License](https://img.shields.io/npm/l/@karin-js/platform-hono)](https://github.com/your-username/karin-js/blob/main/LICENSE)
-
----
-
-## Overview
-
-`@karin-js/platform-hono` provides the integration layer between Karin-JS and the Hono framework. It is the recommended adapter when targeting environments outside of traditional Bun/Node.js servers due to Hono's robust support for Web Standards.
+Hono HTTP adapter for Karin-JS, optimized for Edge runtimes and serverless deployments.
 
 ## Installation
 
-Install `@karin-js/platform-hono` along with `@karin-js/core` and its peer dependencies:
-
 ```bash
-bun add @karin-js/core @karin-js/platform-hono reflect-metadata tsyringe
+bun add @karin-js/core @karin-js/platform-hono
 ```
 
-## Quick Start
+## Overview
 
-To use the Hono adapter, you'll pass an instance of `HonoAdapter` to `KarinFactory.create` when bootstrapping your Karin-JS application.
+The Hono adapter provides:
+- ✅ Edge runtime support (Cloudflare Workers, Deno Deploy)
+- ✅ Lightweight and fast
+- ✅ Built-in middleware ecosystem
+- ✅ Excellent TypeScript support
 
-**1. Create your controller**
-
-`src/users.controller.ts`
-
-```typescript
-import { Controller, Get } from "@karin-js/core";
-
-@Controller("/users")
-export class UsersController {
-  @Get("/")
-  getUsers() {
-    return [{ id: 1, name: "John Doe" }];
-  }
-}
-```
-
-**2. Bootstrap the application**
-
-`src/main.ts`
+## Usage
 
 ```typescript
-import "reflect-metadata";
 import { KarinFactory } from "@karin-js/core";
 import { HonoAdapter } from "@karin-js/platform-hono";
 
-async function bootstrap() {
-  // Use the HonoAdapter instance
-  const app = await KarinFactory.create(new HonoAdapter(), {
-    scan: "./src/**/*.controller.ts",
-  });
+const app = await KarinFactory.create(new HonoAdapter(), {
+  scan: "./src/**/*.ts",
+});
 
-  app.listen(3000);
-}
-
-bootstrap();
+app.listen(3000);
 ```
 
-**3. Run the server**
+## Serverless Deployment
 
-```bash
-bun run src/main.ts
+### Cloudflare Workers
+
+```typescript
+import { HonoAdapter } from "@karin-js/platform-hono";
+import { KarinFactory } from "@karin-js/core";
+import { AppController } from "./app.controller";
+
+const app = await KarinFactory.create(new HonoAdapter(), {
+  controllers: [AppController],
+  scan: false, // Disable file scanning for serverless
+});
+
+export default app.getHttpServer();
 ```
 
-## Contributing
+### Deno Deploy
 
-Karin-JS is currently in its early stages and we welcome all contributions.
+```typescript
+import { HonoAdapter } from "npm:@karin-js/platform-hono";
+import { KarinFactory } from "npm:@karin-js/core";
+
+const app = await KarinFactory.create(new HonoAdapter(), {
+  scan: "./src/**/*.ts",
+});
+
+Deno.serve(app.getHttpServer().fetch);
+```
+
+## Features
+
+- **Edge-first**: Designed for modern Edge runtimes
+- **Lightweight**: Minimal overhead
+- **Fast**: Excellent performance characteristics
+- **Flexible**: Works in Node.js, Bun, Deno, and Edge
+
+## Performance
+
+Hono adapter provides excellent performance:
+- ~97,000 req/sec (wrk benchmark)
+- ~102,000 req/sec (oha benchmark)
+- Sub-millisecond average latency
+
+## When to Use
+
+Choose Hono adapter when:
+- Deploying to Edge runtimes (Cloudflare Workers, Deno Deploy)
+- Building serverless functions
+- You need a lightweight, portable solution
+- Edge computing is a priority
+
+Choose H3 adapter when:
+- Maximum performance is critical
+- Running on traditional servers (Node.js, Bun)
+- You don't need Edge runtime support
 
 ## License
 
-Karin-JS is [MIT licensed](https://github.com/your-username/karin-js/blob/main/LICENSE).
+MIT

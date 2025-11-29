@@ -1,43 +1,62 @@
 import "reflect-metadata";
 import { KarinFactory, Logger } from "@karin-js/core";
 import { HonoAdapter } from "@karin-js/platform-hono";
-import { ConfigPlugin } from "@karin-js/config";
+import { ConfigPlugin, z } from "@karin-js/config";
 import { MongoosePlugin } from "@karin-js/mongoose";
 import { OpenApiPlugin } from "../../../packages/openapi";
-import { H3Adapter } from "../../../packages/platform-h3";
+import { RedisPlugin } from "@karin-js/redis";
+import { HttpErrorFilter } from "./filters/http.filter";
+import { DogsController } from "./dogs/dogs.controller";
+import { FoxesController } from "./foxes/foxes.controller";
+import { Dogs } from "./dogs/entities/dogs.entity";
+import { Foxes } from "./foxes/entities/foxes.entity";
 
 async function bootstrap() {
   const logger = new Logger("Bootstrap");
 
-  const app = await KarinFactory.create(new H3Adapter(), {
-    scan: "./src/**/*.ts",
-  });
-
   const config = new ConfigPlugin({
-    load: () => ({
-      port: parseInt(process.env.PORT || "3000", 10),
-      mongoUri: process.env.MONGO_URI || "mongodb://localhost:27017/test",
-      dbName: process.env.DB_NAME || "test_db",
-    }),
+    requiredKeys: ["MONGO_URI", "DB_NAME", "PORT"],
   });
 
-  app.use(config);
+  const mongoose = new MongoosePlugin({
+    uri: () => config.get("MONGO_URI"),
+    options: () => ({
+      dbName: config.get("DB_NAME"),
+      authSource: "admin",
+    }),
+    models: [Dogs, Foxes],
+  });
 
-  app.use(
-    new MongoosePlugin({
-      uri: config.get("mongoUri"),
-      options: {
-        dbName: config.get("dbName"),
-        authSource: "admin",
-      },
-    })
-  );
+  const openapi = new OpenApiPlugin({
+    path: "/docs",
+    title: "Karin-JS API",
+    version: "1.0.0",
+  });
 
-  app.use(new OpenApiPlugin({ path: "/docs" }));
+  const redis = new RedisPlugin({
+    url: () => config.get("REDIS_URL"),
+    failureStrategy: "warn",
+  });
 
-  app.listen(config.get("port"), () => {
+  const app = await KarinFactory.create(new HonoAdapter(), {
+    // scan: "./src/**/*.ts",
+    plugins: [
+      config,
+      mongoose,
+      openapi,
+      redis
+    ],
+    globalFilters: [
+      new HttpErrorFilter(),
+    ],
+    controllers: [DogsController, FoxesController],
+  });
+
+  const port = parseInt(config.get("PORT") || "3000", 10);
+
+  app.listen(port, () => {
     logger.log(
-      `🦊 Karin-JS Server running on http://localhost:${config.get("port")}`
+      `🦊 Karin-JS Server running on http://localhost:${port}`
     );
   });
 }

@@ -7,14 +7,14 @@ import {
 import mongoose, { type ConnectOptions, type Mongoose } from "mongoose";
 import { SCHEMA_METADATA, SCHEMAS_REGISTRY } from "./utils/decorators";
 import { SchemaFactory } from "./utils/schema.factory";
+import { MongooseExceptionFilter } from "./mongoose-exception.filter";
 
 export interface MongoosePluginOptions {
-  uri: string;
-  options?: ConnectOptions;
-
-  dbName?: string;
-
+  uri: string | (() => string);
+  options?: ConnectOptions | (() => ConnectOptions);
   models?: Function[];
+
+  autoRegisterExceptionFilter?: boolean;
 }
 
 export class MongoosePlugin implements KarinPlugin {
@@ -22,9 +22,15 @@ export class MongoosePlugin implements KarinPlugin {
   private logger = new Logger("Mongoose");
   private connection: Mongoose | null = null;
 
-  constructor(private readonly config: MongoosePluginOptions) {}
+  constructor(private readonly config: MongoosePluginOptions) { }
 
   install(app: KarinApplication) {
+    // ✅ ENTERPRISE FEATURE: Auto-register exception filter
+    if (this.config.autoRegisterExceptionFilter !== false) {
+      app.useGlobalFilters(new MongooseExceptionFilter());
+      this.logger.log("✅ MongooseExceptionFilter registered automatically");
+    }
+
     if (this.config.models && this.config.models.length > 0) {
       this.config.models.forEach((model) => {
         SCHEMAS_REGISTRY.add(model);
@@ -38,19 +44,18 @@ export class MongoosePlugin implements KarinPlugin {
   }
 
   async onPluginInit() {
+    this.registerModels();
     try {
-      if (!this.config.uri) throw new Error("URI is required");
+      const uri = typeof this.config.uri === "function" ? this.config.uri() : this.config.uri;
+      if (!uri) throw new Error("URI is required");
 
-      const connectionOptions: ConnectOptions = {
-        ...this.config.options,
-      };
-
-      if (this.config.dbName) {
-        connectionOptions.dbName = this.config.dbName;
-      }
+      const connectionOptions: ConnectOptions =
+        typeof this.config.options === "function"
+          ? this.config.options()
+          : (this.config.options || {});
 
       this.connection = await mongoose.connect(
-        this.config.uri,
+        uri,
         connectionOptions
       );
 

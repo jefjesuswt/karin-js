@@ -12,7 +12,7 @@ export class KarinExecutionContext implements ExecutionContext {
     private readonly platformContext: any,
     private readonly controllerClass: Type<any>,
     private readonly handler: Function
-  ) {}
+  ) { }
 
   getClass<T = any>(): Type<T> {
     return this.controllerClass;
@@ -44,5 +44,9 @@ export class KarinExecutionContext implements ExecutionContext {
 
   switchToHttp(): HttpArgumentsHost {
     return this;
+  }
+
+  getPlatformContext<T = any>(): T {
+    return this.platformContext;
   }
 }

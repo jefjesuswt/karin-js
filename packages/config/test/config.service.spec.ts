@@ -17,10 +17,10 @@ describe("ConfigService", () => {
         expect(service.getAll()).toEqual(config);
     });
 
-    it("should return undefined for non-existent keys", () => {
+    it("should throw error for non-existent keys", () => {
         const config = { PORT: 3000 };
         const service = new ConfigService(config);
 
-        expect(service.get("HOST" as any)).toBeUndefined();
+        expect(() => service.get("HOST" as any)).toThrow('Missing required configuration key: "HOST"');
     });
 });

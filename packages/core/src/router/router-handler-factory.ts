@@ -94,7 +94,7 @@ export class RouteHandlerFactory {
         let executionContext: KarinExecutionContext | undefined;
 
         // ✅ OPTIMIZACIÓN: Solo crea context si es necesario
-        if (hasGuards || hasParams) {
+        if (hasGuards || hasParams || hasInterceptors) {
           executionContext = new KarinExecutionContext(
             this.adapter,
             ctx,
@@ -127,14 +127,7 @@ export class RouteHandlerFactory {
 
         // Interceptors
         if (hasInterceptors) {
-          if (!executionContext) {
-            executionContext = new KarinExecutionContext(
-              this.adapter,
-              ctx,
-              ControllerClass,
-              boundHandler
-            );
-          }
+          // executionContext is guaranteed to be created above
 
           const baseHandler: CallHandler = {
             handle: async () => boundHandler(...args),
@@ -143,7 +136,7 @@ export class RouteHandlerFactory {
           const executionChain = await this.composeInterceptors(
             interceptors,
             baseHandler,
-            executionContext
+            executionContext!
           );
 
           return await executionChain.handle();

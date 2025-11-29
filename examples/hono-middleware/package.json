@@ -1,0 +1,17 @@
+{
+    "name": "karin-example-hono-middleware",
+    "version": "0.0.1",
+    "private": true,
+    "scripts": {
+        "dev": "bun run src/main.ts"
+    },
+    "dependencies": {
+        "@karin-js/core": "workspace:*",
+        "@karin-js/platform-hono": "workspace:*",
+        "hono": "^4.10.6",
+        "reflect-metadata": "^0.2.2"
+    },
+    "devDependencies": {
+        "@types/bun": "latest"
+    }
+}

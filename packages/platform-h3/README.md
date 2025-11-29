@@ -1,76 +1,61 @@
-# @karin-js/platform-h3 🦊
+# @karin-js/platform-h3
 
-The H3 platform adapter for Karin-JS, offering **maximum performance** in traditional server environments (Bun, Node.js).
-
-[![NPM Version](https://img.shields.io/npm/v/@karin-js/platform-h3)](https://www.npmjs.com/package/@karin-js/platform-h3)
-[![Bun Version](https://img.shields.io/badge/bun-%3E%3D1.2.10-lightgrey?logo=bun)](https://bun.sh/)
-[![License](https://img.shields.io/npm/l/@karin-js/platform-h3)](https://github.com/your-username/karin-js/blob/main/LICENSE)
-
----
-
-## Overview
-
-`@karin-js/platform-h3` provides the integration layer between Karin-JS and the H3 web framework. It is the fastest adapter available for Karin-JS.
+H3 HTTP adapter for Karin-JS, optimized for maximum performance on Node.js and Bun.
 
 ## Installation
 
-Install `@karin-js/platform-h3` along with `@karin-js/core` and its peer dependencies:
-
 ```bash
-bun add @karin-js/core @karin-js/platform-h3 reflect-metadata tsyringe
+bun add @karin-js/core @karin-js/platform-h3
 ```
 
-## Quick Start
+## Overview
 
-To use the H3 adapter, you'll pass an instance of `H3Adapter` to `KarinFactory.create` when bootstrapping your Karin-JS application.
+The H3 adapter provides:
+- ✅ Maximum performance
+- ✅ Optimized for Node.js and Bun
+- ✅ Minimal overhead
+- ✅ Production-ready
 
-**1. Create your controller**
-
-`src/users.controller.ts`
-
-```typescript
-import { Controller, Get } from "@karin-js/core";
-
-@Controller("/users")
-export class UsersController {
-  @Get("/")
-  getUsers() {
-    return [{ id: 1, name: "John Doe" }];
-  }
-}
-```
-
-**2. Bootstrap the application**
-
-`src/main.ts`
+## Usage
 
 ```typescript
-import "reflect-metadata";
 import { KarinFactory } from "@karin-js/core";
 import { H3Adapter } from "@karin-js/platform-h3";
 
-async function bootstrap() {
-  // We use the 'scan' option for automatic controller discovery (module-less architecture)
-  const app = await KarinFactory.create(new H3Adapter(), {
-    scan: "./src/**/*.controller.ts",
-  });
+const app = await KarinFactory.create(new H3Adapter(), {
+  scan: "./src/**/*.ts",
+});
 
-  app.listen(3000); // Now supports optional host argument: app.listen(3000, '0.0.0.0');
-}
-
-bootstrap();
+app.listen(3000);
 ```
 
-**3. Run the server**
+## Features
 
-```bash
-bun run src/main.ts
-```
+- **High Performance**: Optimized for speed
+- **Low Overhead**: Minimal abstraction layer
+- **Production Ready**: Battle-tested H3 foundation
+- **Modern**: Built for modern runtimes
 
-## Contributing
+## Performance
 
-Karin-JS is currently in its early stages and we welcome all contributions.
+H3 adapter provides the best performance among Karin adapters:
+- Fastest request handling
+- Lowest latency
+- Optimized for high-throughput scenarios
+
+## When to Use
+
+Choose H3 adapter when:
+- Maximum performance is the priority
+- Running on Node.js or Bun (not Edge)
+- Building high-traffic APIs
+- You need the fastest possible framework overhead
+
+Choose Hono adapter when:
+- Deploying to Edge runtimes
+- Portability across runtimes is important
+- Building serverless functions
 
 ## License
 
-Karin-JS is [MIT licensed](https://github.com/your-username/karin-js/blob/main/LICENSE).
+MIT

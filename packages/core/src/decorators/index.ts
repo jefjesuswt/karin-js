@@ -6,3 +6,4 @@ export * from "./constants";
 export * from "./filters";
 export * from "./service";
 export * from "./fast";
+export * from "./interceptor";

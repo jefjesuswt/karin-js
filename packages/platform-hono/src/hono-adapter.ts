@@ -16,6 +16,10 @@ export class HonoAdapter implements IHttpAdapter<Context, Request, Context> {
     return this.app.fetch;
   }
 
+  public getInstance() {
+    return this.app;
+  }
+
   private normalizeResponse(handler: (ctx: Context) => any) {
     return async (c: Context) => {
       const result = await handler(c);

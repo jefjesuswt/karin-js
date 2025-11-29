@@ -10,20 +10,21 @@ import { ConfigService } from "./config.service";
 import { join } from "path";
 import { existsSync } from "fs";
 
-export interface ConfigPluginOptions<T = any> {
+export interface ConfigPluginOptions<T = any, K extends string = string> {
   envFilePath?: string;
   schema?: ZodSchema<T>;
   load?: () => T;
   passthrough?: boolean;
   required?: boolean;
+  requiredKeys?: K[] | readonly K[];
 }
 
-export class ConfigPlugin<T = any> implements KarinPlugin {
+export class ConfigPlugin<T = any, const K extends string = string> implements KarinPlugin {
   name = "ConfigPlugin";
   private logger = new Logger("Config");
   private service!: ConfigService<T>;
 
-  constructor(private readonly options: ConfigPluginOptions<T> = {}) {}
+  constructor(private readonly options: ConfigPluginOptions<T> = {}) { }
 
   install(app: KarinApplication) {
     let loadedEnv: any = {};
@@ -41,7 +42,7 @@ export class ConfigPlugin<T = any> implements KarinPlugin {
       if (existsSync(envPath)) {
         const originalLog = console.log;
         try {
-          console.log = () => {};
+          console.log = () => { };
           const result = config({ path: envPath });
           if (result.error) {
             throw result.error;
@@ -86,17 +87,39 @@ export class ConfigPlugin<T = any> implements KarinPlugin {
       configData = validation.data;
     } else {
       configData = typeof process !== "undefined" ? process.env : {};
+
+      if (this.options.requiredKeys && this.options.requiredKeys.length > 0) {
+        const missingKeys = this.options.requiredKeys.filter(
+          (key) => !configData[key]
+        );
+
+        if (missingKeys.length > 0) {
+          this.logger.error(
+            `❌ Missing required environment variables: ${missingKeys.join(", ")}`
+          );
+          this.logger.error("🛑 Startup aborted due to missing configuration.");
+          if (typeof process !== "undefined" && process.exit) {
+            process.exit(1);
+          } else {
+            throw new Error(
+              `Missing required environment variables: ${missingKeys.join(", ")}`
+            );
+          }
+        }
+      }
     }
 
+    container.registerInstance("CONFIG_DATA", configData);
     this.service = new ConfigService(configData);
     container.registerInstance(ConfigService, this.service);
-    container.registerInstance("CONFIG_SERVICE", this.service);
 
     const keysCount = Object.keys(configData).length;
     this.logger.log(`Loaded configuration (${keysCount} keys)`);
   }
 
-  public get<K extends keyof T>(key: K): T[K] {
+  public get<Key extends (string extends keyof T ? K : keyof T)>(key: Key): string;
+  public get<R = any>(key: string): R;
+  public get(key: any): any {
     if (!this.service) {
       throw new Error(
         "ConfigPlugin has not been installed. Call app.use(plugin) first."
