@@ -1,4 +1,3 @@
-import { container } from "tsyringe";
 import { Logger } from "../logger";
 import type { RouteParamMetadata } from "../decorators/params";
 import type {
@@ -10,7 +9,6 @@ import type {
 } from "../interfaces";
 import { isConstructor } from "../utils/type-guards";
 import { DICache } from "./di-cache";
-
 import { FILTER_CATCH_EXCEPTIONS } from "../decorators/constants";
 
 export interface ResolvedFilter {
@@ -19,12 +17,12 @@ export interface ResolvedFilter {
 }
 
 export interface CompiledRouteMetadata {
-  controllerInstance: Type<any>;
+  controllerInstance: any;
   boundHandler: Function;
   guards: CanActivate[];
   pipes: PipeTransform[];
   interceptors: KarinInterceptor[];
-  filters: ResolvedFilter[];
+  filters: ResolvedFilter[]; // ✅ Ya incluye metadata pre-procesado
   params: ResolvedParamMetadata[];
   isFast: boolean;
 }
@@ -55,20 +53,17 @@ export class MetadataCache {
       return this.cache.get(cacheKey)!;
     }
 
+    // ✅ 1. Pre-resolve controller (Singleton)
     const controllerInstance = DICache.resolve(controllerClass);
-    const boundHandler =
-      controllerInstance[methodName].bind(controllerInstance);
+    const boundHandler = controllerInstance[methodName].bind(controllerInstance);
 
+    // ✅ 2. Pre-resolve guards, pipes, interceptors
     const guards = this.resolveInstances<CanActivate>(rawMetadata.guards);
     const pipes = this.resolveInstances<PipeTransform>(rawMetadata.pipes);
-    const interceptors = this.resolveInstances<KarinInterceptor>(
-      rawMetadata.interceptors
-    );
+    const interceptors = this.resolveInstances<KarinInterceptor>(rawMetadata.interceptors);
 
-    // Resolve filters and their metadata
-    const filterInstances = this.resolveInstances<ExceptionFilter>(
-      rawMetadata.filters
-    );
+    // ✅ 3. OPTIMIZACIÓN: Pre-resolve filters CON metadata
+    const filterInstances = this.resolveInstances<ExceptionFilter>(rawMetadata.filters);
     const filters: ResolvedFilter[] = filterInstances.map((instance) => {
       const constructor = Object.getPrototypeOf(instance).constructor;
       const catchMetatypes =
@@ -76,6 +71,10 @@ export class MetadataCache {
       return { instance, catchMetatypes };
     });
 
+    // ✅ 4. OPTIMIZACIÓN: Pre-ordenar filters UNA VEZ
+    this.sortFilters(filters);
+
+    // ✅ 5. Pre-resolve pipes de parámetros
     const params: ResolvedParamMetadata[] = rawMetadata.params.map((param) => ({
       ...param,
       resolvedPipes: this.resolveInstances<PipeTransform>(param.pipes || []),
@@ -87,7 +86,7 @@ export class MetadataCache {
       guards,
       pipes,
       interceptors,
-      filters,
+      filters, // ✅ Ya ordenados y con metadata
       params,
       isFast: rawMetadata.isFast,
     };
@@ -102,17 +101,24 @@ export class MetadataCache {
   }
 
   /**
-   * Resuelve instancias desde constructores o instancias ya creadas
+   * ✅ OPTIMIZACIÓN: Sort filters solo una vez en compile
    */
+  private static sortFilters(filters: ResolvedFilter[]) {
+    filters.sort((a, b) => {
+      const isCatchAllA = a.catchMetatypes.length === 0;
+      const isCatchAllB = b.catchMetatypes.length === 0;
+      if (isCatchAllA && !isCatchAllB) return 1;
+      if (!isCatchAllA && isCatchAllB) return -1;
+      return 0;
+    });
+  }
+
   private static resolveInstances<T>(items: any[]): T[] {
     return items.map((item) =>
       isConstructor(item) ? DICache.resolve(item) : item
     );
   }
 
-  /**
-   * Obtiene metadata compilado (falla si no existe)
-   */
   static get(
     controllerClass: Type<any>,
     methodName: string

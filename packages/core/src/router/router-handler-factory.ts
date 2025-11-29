@@ -1,27 +1,14 @@
-import { container } from "tsyringe";
 import { KarinExecutionContext } from "../context/execution-context";
 import { ForbiddenException } from "../exceptions/http.exception";
 import { BaseExceptionFilter } from "../exceptions/base-exception.filter";
 import type {
   IHttpAdapter,
   CallHandler,
-  KarinInterceptor,
-  ExceptionFilter,
   Type,
-  CanActivate,
-  PipeTransform,
 } from "../interfaces";
-import type { ResolvedParamMetadata, ResolvedFilter } from "./metadata-cache";
 import { ParamsResolver } from "./param-resolver";
 import { KarinApplication } from "../karin.application";
-
-export interface HandlerDependencies {
-  guards: CanActivate[];
-  pipes: PipeTransform[];
-  interceptors: KarinInterceptor[];
-  filters: ResolvedFilter[];
-  params: ResolvedParamMetadata[];
-}
+import type { CompiledRouteMetadata } from "./metadata-cache";
 
 export class RouteHandlerFactory {
   private paramsResolver = new ParamsResolver();
@@ -29,56 +16,99 @@ export class RouteHandlerFactory {
 
   constructor(private readonly adapter: IHttpAdapter) { }
 
+  /**
+   * ✅ CORREGIDO: Usa metadata pre-compilado sin DI en runtime
+   */
   public create(
     app: KarinApplication,
     ControllerClass: Type<any>,
     methodName: string,
-    deps: HandlerDependencies
+    compiled: CompiledRouteMetadata
   ) {
+    // ✅ FAST PATH: Bypass total para rutas @Fast()
+    if (compiled.isFast) {
+      return this.createFastHandler(app, compiled);
+    }
+
+    // Path normal optimizado
+    return this.createNormalHandler(app, ControllerClass, methodName, compiled);
+  }
+
+  /**
+   * ✅ OPTIMIZADO: Handler ultra-rápido sin middleware
+   */
+  private createFastHandler(
+    app: KarinApplication,
+    compiled: CompiledRouteMetadata
+  ) {
+    const { boundHandler } = compiled;
+
     return async (ctx: any) => {
-      // Graceful shutdown tracking
       const requestPromise = (async () => {
         try {
-          // 1. Lazy Instantiation del Controlador
-          const controllerInstance = container.resolve(ControllerClass);
-          const handlerInstance =
-            controllerInstance[methodName].bind(controllerInstance);
+          // ✅ Ejecuta directo sin guards/pipes/interceptors
+          return await boundHandler();
+        } catch (error: any) {
+          // Manejo básico de errores sin ExecutionContext completo
+          return this.defaultFilter.catch(error, this.createBasicHost(ctx));
+        }
+      })();
 
+      return app.trackRequest(requestPromise);
+    };
+  }
+
+  /**
+   * ✅ CORREGIDO: Usa metadata pre-compilado
+   */
+  private createNormalHandler(
+    app: KarinApplication,
+    ControllerClass: Type<any>,
+    methodName: string,
+    compiled: CompiledRouteMetadata
+  ) {
+    // ✅ TODO pre-resuelto desde MetadataCache
+    const { boundHandler, guards, pipes, interceptors, filters, params } = compiled;
+
+    return async (ctx: any) => {
+      const requestPromise = (async () => {
+        try {
           const executionContext = new KarinExecutionContext(
             this.adapter,
             ctx,
             ControllerClass,
-            handlerInstance
+            boundHandler
           );
 
-          // 2. Guards
-          for (const guard of deps.guards) {
+          // 1. Guards (ya instanciados)
+          for (const guard of guards) {
             const canActivate = await guard.canActivate(executionContext);
             if (!canActivate) {
               throw new ForbiddenException("Forbidden resource");
             }
           }
 
-          // 3. Pipes & Argument Resolution
+          // 2. Params & Pipes (ya instanciados)
           const args = await this.paramsResolver.resolve(
             ctx,
-            deps.params,
-            deps.pipes,
+            params,
+            pipes,
             this.adapter,
             executionContext
           );
 
-          // 4. Interceptors & Handler Execution
-          if (deps.interceptors.length === 0) {
-            return await handlerInstance(...args);
+          // 3. Interceptors & Handler
+          if (interceptors.length === 0) {
+            // ✅ OPTIMIZACIÓN: Bypass si no hay interceptors
+            return await boundHandler(...args);
           }
 
           const baseHandler: CallHandler = {
-            handle: async () => handlerInstance(...args),
+            handle: async () => boundHandler(...args),
           };
 
           const executionChain = await this.composeInterceptors(
-            deps.interceptors,
+            interceptors,
             baseHandler,
             executionContext
           );
@@ -88,7 +118,7 @@ export class RouteHandlerFactory {
           return this.handleException(
             error,
             ctx,
-            deps.filters,
+            filters,
             ControllerClass.prototype[methodName]
           );
         }
@@ -98,16 +128,22 @@ export class RouteHandlerFactory {
     };
   }
 
+  /**
+   * ✅ OPTIMIZADO: Usa filters pre-ordenados
+   */
   private async handleException(
     exception: any,
     ctx: any,
-    resolvedFilters: ResolvedFilter[],
+    resolvedFilters: any[], // Ya pre-ordenados y con metadata
     method: Function
   ) {
-    for (const filter of resolvedFilters) {
+    // ✅ Los filters ya vienen con su metadata desde MetadataCache
+    for (const filterData of resolvedFilters) {
+      const { instance, catchMetatypes } = filterData;
+
       const handlesException =
-        filter.catchMetatypes.length === 0 ||
-        filter.catchMetatypes.some((meta: any) => exception instanceof meta);
+        catchMetatypes.length === 0 ||
+        catchMetatypes.some((meta: any) => exception instanceof meta);
 
       if (handlesException) {
         const host = new KarinExecutionContext(
@@ -117,7 +153,7 @@ export class RouteHandlerFactory {
           method
         ).switchToHttp();
 
-        return filter.instance.catch(exception, host);
+        return instance.catch(exception, host);
       }
     }
 
@@ -132,7 +168,7 @@ export class RouteHandlerFactory {
   }
 
   private async composeInterceptors(
-    interceptors: KarinInterceptor[],
+    interceptors: any[],
     handler: CallHandler,
     context: KarinExecutionContext
   ): Promise<CallHandler> {
@@ -151,5 +187,17 @@ export class RouteHandlerFactory {
       };
     }
     return next;
+  }
+
+  /**
+   * ✅ Host simplificado para fast path
+   */
+  private createBasicHost(ctx: any) {
+    return {
+      switchToHttp: () => ({
+        getRequest: () => this.adapter.getRequest(ctx),
+        getResponse: () => this.adapter.getResponse(ctx),
+      }),
+    } as any;
   }
 }

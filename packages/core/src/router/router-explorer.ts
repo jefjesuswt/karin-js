@@ -4,11 +4,10 @@ import { KarinApplication } from "../karin.application";
 import { MetadataScanner, type RouteDefinition } from "./metadata-scanner";
 import { isExceptionFilter } from "../utils/type-guards";
 import type { IHttpAdapter, ExceptionFilter } from "../interfaces";
-import { FILTER_CATCH_EXCEPTIONS } from "../decorators/constants";
 import pc from "picocolors";
 import { RouteHandlerFactory } from "./router-handler-factory";
-import { MetadataCache } from "./metadata-cache"; // ✅ Nueva importación
-import { DICache } from "./di-cache"; // ✅ Nueva importación
+import { MetadataCache } from "./metadata-cache";
+import { DICache } from "./di-cache";
 
 export class RouterExplorer {
   private logger = new Logger("RouterExplorer");
@@ -20,6 +19,7 @@ export class RouterExplorer {
   }
 
   public explore(app: KarinApplication, ControllerClass: any) {
+    // ✅ Pre-resolve controller
     DICache.resolve(ControllerClass);
 
     app.registerController(ControllerClass);
@@ -42,6 +42,7 @@ export class RouterExplorer {
     if (adapterMethod) {
       const deps = this.resolveDependencies(app, route);
 
+      // ✅ Pre-compilar metadata (se hace UNA VEZ en bootstrap)
       const compiled = MetadataCache.compile(ControllerClass, methodName, {
         guards: deps.guards,
         pipes: deps.pipes,
@@ -51,6 +52,7 @@ export class RouterExplorer {
         isFast: route.isFast,
       });
 
+      // ✅ Crear handler con metadata pre-compilado
       const handler = this.handlerFactory.create(
         app,
         ControllerClass,
@@ -65,18 +67,13 @@ export class RouterExplorer {
   }
 
   private resolveDependencies(app: KarinApplication, route: RouteDefinition) {
+    // ✅ OPTIMIZACIÓN: Usar DICache en vez de container.resolve()
     const resolve = (items: any[]) =>
       items.map((item) => DICache.resolve(item));
 
-    const guards = resolve([
-      ...app.getGlobalGuards(),
-      ...route.guards,
-    ]);
+    const guards = resolve([...app.getGlobalGuards(), ...route.guards]);
 
-    const pipes = resolve([
-      ...app.getGlobalPipes(),
-      ...route.pipes,
-    ]);
+    const pipes = resolve([...app.getGlobalPipes(), ...route.pipes]);
 
     const interceptors = resolve(route.interceptors);
 
@@ -85,32 +82,17 @@ export class RouterExplorer {
       ...app.getGlobalFilters(),
     ]).filter((f) => isExceptionFilter(f)) as ExceptionFilter[];
 
-    this.sortFilters(filters);
+    // ✅ REMOVIDO: No ordenamos aquí, se hace en MetadataCache.compile()
 
     return { guards, pipes, interceptors, filters };
   }
 
-  private sortFilters(filters: ExceptionFilter[]) {
-    filters.sort((a, b) => {
-      const metaA =
-        Reflect.getMetadata(
-          FILTER_CATCH_EXCEPTIONS,
-          Object.getPrototypeOf(a).constructor
-        ) || [];
-      const metaB =
-        Reflect.getMetadata(
-          FILTER_CATCH_EXCEPTIONS,
-          Object.getPrototypeOf(b).constructor
-        ) || [];
-      const isCatchAllA = metaA.length === 0;
-      const isCatchAllB = metaB.length === 0;
-      if (isCatchAllA && !isCatchAllB) return 1;
-      if (!isCatchAllA && isCatchAllB) return -1;
-      return 0;
-    });
-  }
-
-  private logRoute(method: string, path: string, controllerName: string, isFast: boolean) {
+  private logRoute(
+    method: string,
+    path: string,
+    controllerName: string,
+    isFast: boolean
+  ) {
     const methodColor = this.getMethodColor(method);
     const coloredMethod = pc.bold(methodColor(method.padEnd(7)));
     const routeInfo = path.padEnd(4);
