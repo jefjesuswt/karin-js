@@ -6,6 +6,8 @@ import type {
   ExceptionFilter,
 } from "./interfaces";
 import { Logger } from "./logger";
+import { DICache } from "./router/di-cache";
+import { MetadataCache } from "./router/metadata-cache";
 
 export class KarinApplication {
   private logger = new Logger("KarinApplication");
@@ -87,12 +89,19 @@ export class KarinApplication {
         this.logger.log(`${plugin.name} initialized`);
       }
     }
+
+    // ✅ NUEVO: Log de estadísticas de optimización
+    if (process.env.DEBUG) {
+      const diStats = DICache.getStats();
+      const metaStats = MetadataCache.getStats();
+      this.logger.debug(`DI Cache: ${diStats.size} instances cached`);
+      this.logger.debug(`Metadata Cache: ${metaStats.size} routes compiled`);
+    }
   }
 
   public listen(port: number, ...args: any[]): void {
     let host: string | undefined = undefined;
     let callback: (() => void) | undefined = undefined;
-
     if (args.length === 1) {
       if (typeof args[0] === "string") host = args[0];
       else if (typeof args[0] === "function") callback = args[0];
@@ -111,7 +120,7 @@ export class KarinApplication {
         } else {
           const displayHost = host ?? "localhost";
           this.logger.log(
-            `Application is running on http://${displayHost}:${port}`
+            `🦊 Karin-JS Server running on http://${displayHost}:${port}`
           );
         }
       })
@@ -120,24 +129,20 @@ export class KarinApplication {
         if (typeof process !== "undefined" && process.exit) process.exit(1);
       });
   }
-
   public getGlobalPipes() {
     return this.globalPipes;
   }
   public getGlobalGuards() {
     return this.globalGuards;
   }
-
   public async trackRequest<T>(promise: Promise<T>): Promise<T> {
     this.activeRequests.add(promise);
     return promise.finally(() => {
       this.activeRequests.delete(promise);
     });
   }
-
   private registerShutdownHooks() {
     if (this.shutdownHooksRegistered) return;
-
     if (
       typeof process === "undefined" ||
       typeof process.on !== "function" ||
@@ -167,11 +172,9 @@ export class KarinApplication {
       this.shutdown("unhandledRejection");
     });
   }
-
   private async shutdown(signal: string) {
     if (this.isShuttingDown) return;
     this.isShuttingDown = true;
-
     this.logger.log(`Shutting down due to: ${signal}`);
 
     if (this.server && typeof this.server.stop === "function") {
@@ -211,6 +214,8 @@ export class KarinApplication {
         }
       }
     }
+    DICache.clear();
+    MetadataCache.clear();
 
     this.logger.log("Shutdown complete. Goodbye! 👋");
     if (typeof process !== "undefined" && process.exit) process.exit(0);

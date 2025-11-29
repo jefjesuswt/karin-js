@@ -10,14 +10,6 @@ export function generateEntityTemplate(name: string) {
 export class ${className} {
   @Prop({ required: true, index: true })
   name: string;
-
-  /*
-  @Prop()
-  age: number;
-
-  @Prop({ default: Date.now })
-  createdAt: Date;
-  */
 }
 `;
 }

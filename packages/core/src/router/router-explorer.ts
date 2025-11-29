@@ -1,23 +1,14 @@
 import "reflect-metadata";
-import { container } from "tsyringe";
 import { Logger } from "../logger";
 import { KarinApplication } from "../karin.application";
 import { MetadataScanner, type RouteDefinition } from "./metadata-scanner";
-import {
-  isConstructor,
-  isExceptionFilter,
-  isInterceptor,
-} from "../utils/type-guards";
-import type {
-  IHttpAdapter,
-  PipeTransform,
-  CanActivate,
-  KarinInterceptor,
-  ExceptionFilter,
-} from "../interfaces";
+import { isExceptionFilter } from "../utils/type-guards";
+import type { IHttpAdapter, ExceptionFilter } from "../interfaces";
 import { FILTER_CATCH_EXCEPTIONS } from "../decorators/constants";
 import pc from "picocolors";
 import { RouteHandlerFactory } from "./router-handler-factory";
+import { MetadataCache } from "./metadata-cache"; // ✅ Nueva importación
+import { DICache } from "./di-cache"; // ✅ Nueva importación
 
 export class RouterExplorer {
   private logger = new Logger("RouterExplorer");
@@ -29,14 +20,10 @@ export class RouterExplorer {
   }
 
   public explore(app: KarinApplication, ControllerClass: any) {
-    if (!container.isRegistered(ControllerClass)) {
-      container.registerSingleton(ControllerClass);
-    }
+    DICache.resolve(ControllerClass);
 
-    // 2. Registro en App (Para OpenAPI)
     app.registerController(ControllerClass);
 
-    // 3. Escaneo de rutas (Pura metadata)
     const routes = this.scanner.scan(ControllerClass);
 
     for (const route of routes) {
@@ -55,38 +42,43 @@ export class RouterExplorer {
     if (adapterMethod) {
       const deps = this.resolveDependencies(app, route);
 
+      const compiled = MetadataCache.compile(ControllerClass, methodName, {
+        guards: deps.guards,
+        pipes: deps.pipes,
+        interceptors: deps.interceptors,
+        filters: deps.filters,
+        params: route.params,
+        isFast: route.isFast,
+      });
+
       const handler = this.handlerFactory.create(
         app,
         ControllerClass,
         methodName,
-        { ...deps, params: route.params }
+        compiled
       );
 
       adapterMethod.call(this.adapter, fullPath, handler);
 
-      this.logRoute(httpMethod, fullPath, ControllerClass.name);
+      this.logRoute(httpMethod, fullPath, ControllerClass.name, route.isFast);
     }
   }
 
   private resolveDependencies(app: KarinApplication, route: RouteDefinition) {
     const resolve = (items: any[]) =>
-      items.map((item) =>
-        isConstructor(item) ? container.resolve(item) : item
-      );
+      items.map((item) => DICache.resolve(item));
 
     const guards = resolve([
       ...app.getGlobalGuards(),
       ...route.guards,
-    ]) as CanActivate[];
+    ]);
 
     const pipes = resolve([
       ...app.getGlobalPipes(),
       ...route.pipes,
-    ]) as PipeTransform[];
+    ]);
 
-    const interceptors = resolve(route.interceptors).filter((i) =>
-      isInterceptor(i)
-    ) as KarinInterceptor[];
+    const interceptors = resolve(route.interceptors);
 
     const filters = resolve([
       ...route.filters,
@@ -118,14 +110,17 @@ export class RouterExplorer {
     });
   }
 
-  private logRoute(method: string, path: string, controllerName: string) {
+  private logRoute(method: string, path: string, controllerName: string, isFast: boolean) {
     const methodColor = this.getMethodColor(method);
     const coloredMethod = pc.bold(methodColor(method.padEnd(7)));
     const routeInfo = path.padEnd(4);
     const separator = pc.dim("::");
     const controllerInfo = pc.cyan(controllerName);
+
+    const fastIndicator = isFast ? pc.yellow(" ⚡FAST") : "";
+
     this.logger.log(
-      `${coloredMethod} ${routeInfo} ${separator} ${controllerInfo}`
+      `${coloredMethod} ${routeInfo} ${separator} ${controllerInfo}${fastIndicator}`
     );
   }
 

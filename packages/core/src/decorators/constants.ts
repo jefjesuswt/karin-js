@@ -7,3 +7,4 @@ export const PIPES_METADATA = Symbol("karin:pipes");
 export const FILTER_METADATA = Symbol("karin:filters");
 export const FILTER_CATCH_EXCEPTIONS = Symbol("karin:filter-catch");
 export const INTERCEPTORS_METADATA = Symbol("karin:interceptors");
+export const FAST_ROUTE_METADATA = Symbol("karin:fast-route");

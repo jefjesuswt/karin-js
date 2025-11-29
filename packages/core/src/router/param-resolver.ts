@@ -1,20 +1,18 @@
-import { container } from "tsyringe";
-import { isConstructor, isObject } from "../utils/type-guards";
+import { isObject } from "../utils/type-guards";
 import type {
   IHttpAdapter,
   PipeTransform,
   ArgumentMetadata,
   ExecutionContext,
 } from "../interfaces";
-import type { RouteParamMetadata } from "../decorators/params";
+import type { ResolvedParamMetadata } from "./metadata-cache";
 
 export class ParamsResolver {
+
   async resolve(
     ctx: any,
-    params: RouteParamMetadata[],
-    // 👇 CAMBIO: Ahora esperamos Pipes ya instanciados (rendimiento)
-    // Aunque mantenemos compatibilidad por si acaso
-    pipes: PipeTransform[],
+    params: ResolvedParamMetadata[],
+    globalPipes: PipeTransform[],
     adapter: IHttpAdapter,
     executionContext: ExecutionContext
   ): Promise<unknown[]> {
@@ -60,28 +58,19 @@ export class ParamsResolver {
         value = value[param.data];
       }
 
-      // 👇 OPTIMIZACIÓN: Pipes locales del parámetro
-      // Aquí seguimos resolviendo bajo demanda porque están en metadata profunda,
-      // pero podríamos optimizarlo en el futuro pre-procesando metadata.
-      // Por ahora, optimizamos los pipes globales/clase/método que vienen en 'pipes'.
-      const paramPipesInstances = (param.pipes || []).map((p) =>
-        isConstructor(p) ? container.resolve(p) : p
-      );
-
-      const pipesToRun = [...pipes, ...paramPipesInstances];
+      let pipesToRun = globalPipes;
+      if (param.resolvedPipes.length > 0) {
+        pipesToRun =
+          globalPipes.length > 0
+            ? [...globalPipes, ...param.resolvedPipes]
+            : param.resolvedPipes;
+      }
 
       for (const pipe of pipesToRun) {
-        // Asumimos que 'pipe' ya es instancia si viene del array principal
-        const pipeInstance = isConstructor(pipe)
-          ? container.resolve(pipe)
-          : pipe;
-
-        if ((pipeInstance as PipeTransform).transform) {
-          value = await (pipeInstance as PipeTransform).transform(value, {
-            type: metaType,
-            data: typeof param.data === "string" ? param.data : undefined,
-          });
-        }
+        value = await pipe.transform(value, {
+          type: metaType,
+          data: typeof param.data === "string" ? param.data : undefined,
+        });
       }
 
       args[param.index] = value;

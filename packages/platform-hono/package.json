@@ -1,10 +1,10 @@
 {
   "name": "@karin-js/platform-hono",
-  "version": "0.3.7",
+  "version": "0.6.0",
   "module": "index.ts",
   "type": "module",
   "dependencies": {
-    "@karin-js/core": "^0.5.5",
+    "@karin-js/core": "^0.6.0",
     "hono": "^4.10.6"
   },
   "devDependencies": {

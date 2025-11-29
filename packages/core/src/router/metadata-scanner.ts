@@ -8,6 +8,7 @@ import {
   PIPES_METADATA,
   FILTER_METADATA,
   INTERCEPTORS_METADATA,
+  FAST_ROUTE_METADATA, // ✅ Importamos el nuevo metadata
 } from "../decorators/constants";
 import type { RouteParamMetadata } from "../decorators/params";
 import type {
@@ -27,6 +28,7 @@ export interface RouteDefinition {
   interceptors: KarinInterceptor[];
   filters: ExceptionFilter[];
   params: RouteParamMetadata[];
+  isFast: boolean;
 }
 
 export class MetadataScanner {
@@ -37,7 +39,6 @@ export class MetadataScanner {
       ControllerClass
     ) as string;
 
-    // Metadatos de clase (Globales para el controlador)
     const classGuards =
       Reflect.getMetadata(GUARDS_METADATA, ControllerClass) || [];
     const classPipes =
@@ -68,6 +69,8 @@ export class MetadataScanner {
       if (fullPath.length > 1 && fullPath.endsWith("/"))
         fullPath = fullPath.slice(0, -1);
 
+      const isFast = Reflect.getMetadata(FAST_ROUTE_METADATA, method) === true;
+
       const methodGuards = Reflect.getMetadata(GUARDS_METADATA, method) || [];
       const methodPipes = Reflect.getMetadata(PIPES_METADATA, method) || [];
       const methodInterceptors =
@@ -86,6 +89,7 @@ export class MetadataScanner {
         interceptors: [...classInterceptors, ...methodInterceptors],
         filters: [...classFilters, ...methodFilters],
         params,
+        isFast,
       });
     }
 

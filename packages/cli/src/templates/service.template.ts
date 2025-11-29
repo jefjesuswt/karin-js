@@ -10,7 +10,7 @@ import { type Update${className}Dto } from "./dtos/update-${name}.dto";
 
 @Service()
 export class ${className}Service {
-  // private items = []; // Mock DB
+
 
   create(data: Create${className}Dto) {
     return { id: Math.floor(Math.random() * 1000), ...data };

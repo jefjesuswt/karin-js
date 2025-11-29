@@ -11,24 +11,23 @@ import type {
   CanActivate,
   PipeTransform,
 } from "../interfaces";
-import type { RouteParamMetadata } from "../decorators/params";
+import type { ResolvedParamMetadata, ResolvedFilter } from "./metadata-cache";
 import { ParamsResolver } from "./param-resolver";
-import { FILTER_CATCH_EXCEPTIONS } from "../decorators/constants";
 import { KarinApplication } from "../karin.application";
 
 export interface HandlerDependencies {
   guards: CanActivate[];
   pipes: PipeTransform[];
   interceptors: KarinInterceptor[];
-  filters: ExceptionFilter[];
-  params: RouteParamMetadata[];
+  filters: ResolvedFilter[];
+  params: ResolvedParamMetadata[];
 }
 
 export class RouteHandlerFactory {
   private paramsResolver = new ParamsResolver();
   private defaultFilter = new BaseExceptionFilter();
 
-  constructor(private readonly adapter: IHttpAdapter) {}
+  constructor(private readonly adapter: IHttpAdapter) { }
 
   public create(
     app: KarinApplication,
@@ -70,6 +69,10 @@ export class RouteHandlerFactory {
           );
 
           // 4. Interceptors & Handler Execution
+          if (deps.interceptors.length === 0) {
+            return await handlerInstance(...args);
+          }
+
           const baseHandler: CallHandler = {
             handle: async () => handlerInstance(...args),
           };
@@ -98,17 +101,13 @@ export class RouteHandlerFactory {
   private async handleException(
     exception: any,
     ctx: any,
-    resolvedFilters: any[],
+    resolvedFilters: ResolvedFilter[],
     method: Function
   ) {
-    for (const filterInstance of resolvedFilters) {
-      const constructor = Object.getPrototypeOf(filterInstance).constructor;
-      const catchMetatypes =
-        Reflect.getMetadata(FILTER_CATCH_EXCEPTIONS, constructor) || [];
-
+    for (const filter of resolvedFilters) {
       const handlesException =
-        catchMetatypes.length === 0 ||
-        catchMetatypes.some((meta: any) => exception instanceof meta);
+        filter.catchMetatypes.length === 0 ||
+        filter.catchMetatypes.some((meta: any) => exception instanceof meta);
 
       if (handlesException) {
         const host = new KarinExecutionContext(
@@ -118,7 +117,7 @@ export class RouteHandlerFactory {
           method
         ).switchToHttp();
 
-        return filterInstance.catch(exception, host);
+        return filter.instance.catch(exception, host);
       }
     }
 
