@@ -8,7 +8,7 @@
 
 Karin-JS is a personal learning project exploring modern backend patterns in the Bun ecosystem. It draws inspiration from established frameworks like NestJS while experimenting with a module-less architecture optimized for Bun's performance characteristics.
 
-## ⚠️ Project Status: Alpha (v0.7.2)
+## ⚠️ Project Status: Alpha (v0.7.1)
 
 This is an **experimental learning project** and a work in progress. While functional, it's not yet battle-tested for production use.
 
@@ -72,18 +72,21 @@ Karin-JS is **not** trying to replace NestJS or any established framework. Inste
 
 Karin-JS offers **two ways** to structure your application:
 
-#### 1. File-Based Discovery (Recommended for Development)
+#### 1. File-Based Discovery
 
 Automatically discover controllers by scanning files:
 
 ```typescript
 await KarinFactory.create(new HonoAdapter(), {
   scan: "./src/**/*.ts", // Auto-discover controllers
-  plugins: [new ConfigPlugin(), new MongoosePlugin({ uri: "..." })],
+  plugins: [
+    new ConfigPlugin(), 
+    new MongoosePlugin({ uri: "..." })
+  ],
 });
 ```
 
-#### 2. Manual Registration (Recommended for Production/Serverless)
+#### 2. Manual Registration (Recommended for Serverless)
 
 Explicitly declare controllers and models:
 
