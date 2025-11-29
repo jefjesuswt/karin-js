@@ -1,5 +1,13 @@
 # @karin-js/mongoose
 
+## 2.0.5
+
+### Patch Changes
+
+- 73b07b4: dependencies fixed
+- Updated dependencies [73b07b4]
+  - @karin-js/core@0.5.5
+
 ## 2.0.4
 
 ### Patch Changes
