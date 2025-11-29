@@ -1,5 +1,11 @@
 # @karin-js/core
 
+## 0.5.5
+
+### Patch Changes
+
+- 73b07b4: dependencies fixed
+
 ## 0.5.4
 
 ### Patch Changes

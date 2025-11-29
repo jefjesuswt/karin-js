@@ -1,5 +1,11 @@
 # @karin-js/config
 
+## 2.0.5
+
+### Patch Changes
+
+- 73b07b4: dependencies fixed
+
 ## 2.0.4
 
 ### Patch Changes

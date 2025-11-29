@@ -1,5 +1,11 @@
 # @karin-js/cli
 
+## 0.5.1
+
+### Patch Changes
+
+- 73b07b4: dependencies fixed
+
 ## 0.5.0
 
 ### Minor Changes

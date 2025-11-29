@@ -1,5 +1,13 @@
 # @karinjs/platform-h3
 
+## 0.2.7
+
+### Patch Changes
+
+- 73b07b4: dependencies fixed
+- Updated dependencies [73b07b4]
+  - @karin-js/core@0.5.5
+
 ## 0.2.6
 
 ### Patch Changes
